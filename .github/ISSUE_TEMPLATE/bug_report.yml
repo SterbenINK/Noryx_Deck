@@ -1,0 +1,41 @@
+name: Bug report / Баг
+description: Something doesn't work / Щось не працює
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Noryx! / Дякуємо за тестування!
+        **Tip / Порада:** on the deck — Settings → Diagnostics → «Звіт для розробника» creates a zip you can attach
+        (passwords and tokens are removed from it). / у деку — Налаштування → Діагностика → «Звіт для розробника»
+        створить zip, його можна прикріпити (паролі й токени з нього прибрані).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Що сталося?
+      description: What you did, what you expected, what happened instead. / Що робили, що очікували, що вийшло.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: PC
+      options: [Windows 11, Windows 10, Linux (KDE Plasma), Linux (other / інше)]
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone / Телефон
+      placeholder: "e.g. Samsung A52, Android 14 — app or browser / застосунок чи браузер"
+  - type: input
+    id: version
+    attributes:
+      label: Deck version / Версія
+      description: Settings → Updates / Налаштування → Оновлення
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Логи
+      description: logs/server.log (last lines) or the report zip / останні рядки або zip-звіт
+      render: text

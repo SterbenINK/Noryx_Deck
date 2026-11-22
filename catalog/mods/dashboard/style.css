@@ -1,0 +1,5 @@
+/* «Панель управления»: панели — как карточки умного дома */
+.lyp{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)) ,var(--card);border-radius:22px}
+.lyt b{font-size:72px}
+.lym{height:56px;border-radius:16px}
+.lytl{border-radius:18px}

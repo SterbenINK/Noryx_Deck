@@ -1,0 +1,6 @@
+* text=auto
+# cmd.exe не любит LF; shell — CRLF
+*.bat text eol=crlf
+*.sh  text eol=lf
+*.apk binary
+*.png binary

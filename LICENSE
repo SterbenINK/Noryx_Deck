@@ -1,0 +1,23 @@
+Noryx
+Copyright (c) 2026 Sterben. All rights reserved.
+
+Permission is granted to download, install and use Noryx free of charge for personal, non-commercial
+use, and to install its official updates.
+
+You may not, without prior written permission from the copyright holder:
+  - copy, modify, merge, or create derivative works of the software or its source code, except for writing
+    plugins and mods that use the documented plugin and mod interfaces;
+  - redistribute, sublicense, sell, or publish the software or any part of it, including on app stores,
+    game stores or mod portals;
+  - use the name "Noryx" or its logo for other products.
+
+The source code is published for transparency only. Publishing it does not grant any license beyond the above.
+
+Third-party components (Python libraries installed at first start, Android platform tools downloaded on demand,
+game APIs) remain under their own licenses.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.

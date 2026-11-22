@@ -1,0 +1,19 @@
+# Noryx for Linux - library versions tested together (Python 3.13 and 3.14, x86_64)
+aiohttp==3.14.5
+aiohappyeyeballs==2.7.1
+aiosignal==1.4.0
+attrs==26.1.0
+frozenlist==1.8.0
+idna==3.20
+multidict==7.1.0
+propcache==0.5.4
+yarl==1.25.1
+psutil==7.2.2
+Pillow==13.0.0
+numpy==2.5.4
+soundfile==0.14.0
+cffi==2.1.1
+pycparser==3.12
+typing_extensions==4.16.0
+dbus-fast==5.2.0
+pulsectl==24.12.0

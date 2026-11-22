@@ -1,0 +1,6 @@
+/* «Тёплый графит» — пример мода вида: переменные цветов — в mod.json (vars), здесь — формы.
+   Мод меняет только вид: удали папку mods/warm или выключи его в Настройки → «Моды». */
+.tile{border-radius:30px}
+.tile .ic{border-radius:50%}
+.btn, .chip{border-radius:16px}
+.pcard{border-radius:22px}

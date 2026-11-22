@@ -1,0 +1,9 @@
+{
+  "name": "claude-deck-link",
+  "version": "0.1.4",
+  "title": "Noryx Link",
+  "author": "Sterben",
+  "factorio_version": "2.1",
+  "dependencies": ["base >= 2.0"],
+  "description": "Statistics for the Noryx phone stream deck: power, pollution, production, science, enemies. Every 5 s writes script-output/claude-deck/factorio.json for the deck plugin. Read-only, does not change the game."
+}

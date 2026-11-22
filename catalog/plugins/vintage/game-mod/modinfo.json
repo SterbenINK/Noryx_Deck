@@ -1,0 +1,14 @@
+{
+  "type": "code",
+  "modid": "claudedecklink",
+  "name": "Noryx Link",
+  "authors": [ "nomad" ],
+  "description": "Client-side bridge to Noryx (phone stream deck): sends health, satiety, nutrition, temperature, weather, time, position and temporal storm to the deck plugin over UDP on 127.0.0.1 and accepts commands (treatment via S&R System, chat commands, hotbar slot).",
+  "version": "0.3.0",
+  "side": "Client",
+  "requiredOnClient": false,
+  "requiredOnServer": false,
+  "dependencies": {
+    "game": "1.22.0"
+  }
+}

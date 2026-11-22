@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Noryx — годинник</title>
+<!-- Шпалера для Wallpaper Engine: екран сну дека (годинник, дата, візуалізатор, трек) на робочому столі.
+     Звук і трек дає сам Wallpaper Engine (wallpaperRegisterAudioListener, Media Integration) — дек для цього не потрібен.
+     Вигляд і візуалізатор — як у client/index.html (#saver, vizDraw, artPalette): сцена 1170×540, масштаб під екран. -->
+<style>
+@font-face{font-family:Manrope;src:local("Manrope")}
+:root{--tx:#E8EAEE;--tx2:#C3C9D4;--mu:#9AA3B2;--line:#2A2F39}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;color:var(--tx);font-family:Manrope,"Segoe UI",Roboto,system-ui,sans-serif;user-select:none;cursor:default}
+#stage{position:absolute;left:0;top:0;width:1170px;height:540px;transform-origin:0 0}
+.sv{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  filter:brightness(var(--br,.8));transition:transform 2s ease-in-out}
+.svc{display:flex;flex-direction:column;align-items:center}
+.svt{font-size:150px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--tx);font-variant-numeric:tabular-nums}
+.svd{font-size:24px;font-weight:700;color:var(--mu);margin-top:10px}
+.viz{flex:0 0 auto;width:640px;height:70px;margin:0;display:block}
+.svm{display:flex;align-items:center;gap:14px;max-width:640px;min-width:260px;padding:10px 18px 10px 10px;border-radius:18px;
+  background:rgba(255,255,255,.04);border:1px solid var(--line);transition:opacity .5s}
+.svm.off{display:none}
+.svm img{width:52px;height:52px;border-radius:12px;object-fit:cover;flex:0 0 auto;background:#1F232B}
+.svm img:not([src]){visibility:hidden}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq{display:flex;align-items:flex-end;gap:3px;height:18px;flex:0 0 auto;margin-left:6px}
+.eq i{display:block;width:4px;border-radius:2px;background:var(--tx2);animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.35s}.eq i:nth-child(3){animation-delay:-.7s}
+@keyframes eq{0%,100%{height:5px}50%{height:18px}}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="dbg" class="hide" style="position:fixed;left:12px;bottom:10px;font:14px Consolas,monospace;color:#9AA3B2;z-index:5"></div>
+<div id="stage"><div class="sv" id="sv">
+  <div class="svc"><div class="svt" id="svT">--:--</div><div class="svd" id="svD"></div></div>
+  <canvas class="viz" id="viz" aria-hidden="true"></canvas>
+  <div class="svm off" id="svM"><img id="art" alt="">
+    <div style="min-width:0;max-width:520px"><div class="ell" id="mT" style="font-size:16px;font-weight:800"></div>
+      <div class="ell" id="mA" style="font-size:13px;color:var(--mu)"></div></div>
+    <div class="eq" id="eq"><i></i><i></i><i></i></div></div>
+</div></div>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const P = {lang:'uk', brightness:80, showdate:true, showmusic:true, drift:true, h12:false, debug:false};
+// ---------- сцена 1170×540, як у деку: масштаб під екран, по центру ----------
+function fit(){
+  const k = Math.min(innerWidth / 1170, innerHeight / 540), st = $('#stage');
+  st.style.transform = `translate(${(innerWidth - 1170 * k) / 2}px,${(innerHeight - 540 * k) / 2}px) scale(${k})`;
+  VZ.grad = null;
+}
+addEventListener('resize', fit);
+// ---------- годинник і дата ----------
+function tick(){
+  const now = new Date(), two = x => String(x).padStart(2, '0');
+  let h = now.getHours();
+  if (P.h12){ h = h % 12 || 12; }
+  $('#svT').textContent = `${P.h12 ? h : two(h)}:${two(now.getMinutes())}`;
+  let d = '';
+  try { d = new Intl.DateTimeFormat(P.lang === 'ru' ? 'ru-RU' : 'uk-UA', {weekday:'long', day:'numeric', month:'long'}).format(now); }
+  catch (e) { d = now.toLocaleDateString(); }
+  $('#svD').textContent = d.charAt(0).toUpperCase() + d.slice(1);
+  $('#svD').classList.toggle('hide', !P.showdate);
+}
+setInterval(tick, 1000);
+// від вигорання — раз на 20 с трохи зсуваємо, як екран сну дека
+setInterval(() => { $('#sv').style.transform = P.drift ? `translate(${Math.round(Math.random() * 30 - 15)}px,${Math.round(Math.random() * 20 - 10)}px)` : ''; }, 20000);
+
+// ---------- кольори (як у деку) ----------
+const rgbHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+function hsv2hex(h, s, v){
+  const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+}
+function hex2hsv(hex){
+  const n = parseInt(String(hex).slice(1), 16) || 0, r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+  let h = 0;
+  if (d){ h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; }
+  return {h, s:mx ? d / mx : 0, v:mx};
+}
+const hueGap = (c1, c2) => { const d = Math.abs(hex2hsv(rgbHex(c1)).h - hex2hsv(rgbHex(c2)).h) % 360; return Math.min(d, 360 - d); };
+function hsvMix(c1, c2, t){
+  const a = hex2hsv(rgbHex(c1)), b = hex2hsv(rgbHex(c2));
+  if (a.s < .08) a.h = b.h; if (b.s < .08) b.h = a.h;
+  const dh = ((b.h - a.h + 540) % 360) - 180;
+  return hexRgb(hsv2hex((a.h + dh * t + 360) % 360, a.s + (b.s - a.s) * t, a.v + (b.v - a.v) * t));
+}
+const vivid = (c, dh = 0) => { const q = hex2hsv(rgbHex(c)); return hexRgb(hsv2hex((q.h + dh + 360) % 360, Math.max(q.s, .5), Math.max(q.v, .82))); };
+// 2–3 найпомітніші насичені відтінки обкладинки
+function artPalette(img){
+  const N = 40, c = document.createElement('canvas'); c.width = c.height = N;
+  const x = c.getContext('2d');
+  let d;
+  try { x.drawImage(img, 0, 0, N, N); d = x.getImageData(0, 0, N, N).data; } catch (e) { return null; }
+  const bins = Array.from({length:24}, () => [0, 0, 0, 0]);
+  let total = 0;
+  for (let i = 0; i < d.length; i += 4){
+    const r = d[i], g = d[i + 1], b = d[i + 2], mx = Math.max(r, g, b), dd = mx - Math.min(r, g, b);
+    const v = mx / 255, s = mx ? dd / mx : 0;
+    if (v < .2 || s < .25) continue;
+    let hh = mx === r ? ((g - b) / dd) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
+    hh = (hh * 60 + 360) % 360;
+    const wgt = s * s * v, q = bins[Math.floor(hh / 15) % 24];
+    q[0] += wgt; q[1] += r * wgt; q[2] += g * wgt; q[3] += b * wgt; total += wgt;
+  }
+  if (total < 4) return null;
+  const order = bins.map((q, k) => ({q, k})).filter(o => o.q[0] > 0).sort((a, b) => b.q[0] - a.q[0]);
+  const pick = [];
+  for (const o of order){
+    if (pick.length === 3 || o.q[0] < order[0].q[0] * .06) break;
+    if (pick.some(p => { const dk = Math.abs(p.k - o.k); return Math.min(dk, 24 - dk) < 3; })) continue;
+    pick.push(o);
+  }
+  const cols = pick.map(({q}) => vivid([q[1] / q[0], q[2] / q[0], q[3] / q[0]]));
+  while (cols.length < 3) cols.push(vivid(cols[0], cols.length === 1 ? 32 : -32));
+  return cols;
+}
+const FALLBACK = [[77, 163, 255], [167, 139, 250], [46, 196, 182]];
+
+// ---------- візуалізатор: 48 смуг від центру до країв, угору й униз, підйом швидкий, спад плавний ----------
+const VZ_N = 48;
+// автопідсилення в децибелах, як у деку (server/viz.py): опорний рівень — найгучніша смуга, сповзає 1,5 дБ/с;
+// RANGE дБ нижче опорного — уже нуль; FLOOR — тихий шум не роздуваємо на всю висоту
+const RANGE = 38, FLOOR = -46, FALL = 1.5;
+const VZ = {lv:new Float32Array(VZ_N), cur:new Float32Array(VZ_N), at:-1e9, t:0, raf:0, ref:FLOOR, last:0,
+  pal:FALLBACK.map(c => c.slice()), from:null, to:null, t0:0, grad:null, gkey:''};
+// Wallpaper Engine: 128 чисел ~30 разів на секунду (0–63 лівий канал, 64–127 правий; басы — на початку)
+function audio(a){
+  if (!a || a.length < 128) return;
+  const raw = new Float32Array(64);
+  let top = 0;
+  for (let i = 0; i < 64; i++){
+    const v = Math.min(1.5, Math.max(a[i], a[i + 64])) * (1 + i / 63 * .9);   // у музиці верхів менше — вирівнюємо
+    raw[i] = v; if (v > top) top = v;
+  }
+  const now = performance.now(), dt = Math.min(1, (now - (VZ.last || now)) / 1000); VZ.last = now;
+  const db = v => 20 * Math.log10(v + 1e-7);
+  VZ.ref = Math.max(FLOOR, db(top), VZ.ref - FALL * dt);
+  for (let j = 0; j < VZ_N; j++){
+    const p = j / (VZ_N - 1) * 58, i = Math.floor(p), f = p - i;
+    const v = raw[i] * (1 - f) + raw[Math.min(63, i + 1)] * f;
+    VZ.lv[j] = Math.pow(Math.max(0, Math.min(1, (db(v) - (VZ.ref - RANGE)) / RANGE)), 1.6);
+  }
+  VZ.at = db(top) > FLOOR - RANGE ? now : VZ.at;            // зовсім тихо — тиша (точкова лінія)
+  DBG.n++; DBG.top = Math.max(DBG.top, top);
+  kick();
+}
+// діагностика (налаштування «Діагностика звуку»): скільки разів на секунду приходить звук і який найбільший рівень
+const DBG = {n:0, top:0};
+setInterval(() => {
+  const el = $('#dbg');
+  if (el){ el.textContent = `audio: ${window.wallpaperRegisterAudioListener ? 'API є' : 'API НЕМАЄ'} · ${DBG.n} кадр/с · max ${DBG.top.toFixed(4)}`
+      + ` · ref ${VZ.ref.toFixed(1)} дБ · смуги ${Math.max.apply(null, VZ.cur).toFixed(2)}`;
+    el.classList.toggle('hide', !P.debug); }
+  DBG.n = 0; DBG.top = 0;
+}, 1000);
+function kick(){ if (!VZ.raf) VZ.raf = requestAnimationFrame(frame); }
+function frame(){
+  // время — своё (performance.now), а не из requestAnimationFrame: у браузера Wallpaper Engine оно бывает с другим
+  // началом отсчёта, и тогда звук всегда казался «давно не приходил» — смуги лежали
+  const t = performance.now();
+  VZ.raf = 0;
+  const dt = Math.min(4, Math.max(.25, (t - (VZ.t || t - 16.7)) / 16.7)); VZ.t = t;
+  const stale = t - VZ.at > 400;
+  const up = 1 - Math.pow(.45, dt), down = 1 - Math.pow(.86, dt);
+  let moving = false;
+  for (let i = 0; i < VZ_N; i++){
+    const d = (stale ? 0 : VZ.lv[i]) - VZ.cur[i];
+    VZ.cur[i] += d * (d > 0 ? up : down);
+    if (Math.abs(d) > .003) moving = true;
+  }
+  const fading = palStep(t);
+  draw($('#viz'));
+  if (moving || fading || !stale) VZ.raf = requestAnimationFrame(frame);
+}
+function draw(c){
+  const k = Math.min(innerWidth / 1170, innerHeight / 540) * (devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(c.clientWidth * k)), h = Math.max(1, Math.round(c.clientHeight * k));
+  if (c.width !== w || c.height !== h){ c.width = w; c.height = h; VZ.grad = null; }
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, w, h);
+  const bw = 4.4 * k, step = bw + 3.2 * k;
+  const half = Math.max(3, Math.floor((w / 2 - bw) / step) + 1), mid = h / 2, amp = mid - bw / 2 - k;
+  const key = `${w}|${VZ.pal.map(p => p.map(Math.round).join(',')).join('|')}`;
+  if (!VZ.grad || VZ.gkey !== key){
+    const g = x.createLinearGradient(0, 0, w, 0), [a, b, e] = VZ.pal, near = hueGap(a, b) < 90;
+    const stops = [[0, e, .35], [.07, e, .8], [.15, b, 1], [.29, b, 1], ...(near ? [[.345, hsvMix(b, a, .5), 1]] : []), [.4, a, 1], [.5, a, 1]];
+    for (const [o, col, al] of stops){
+      const rgba = `rgba(${col.map(Math.round).join(',')},${al})`;
+      g.addColorStop(o, rgba); if (o < .5) g.addColorStop(1 - o, rgba);
+    }
+    VZ.grad = g; VZ.gkey = key;
+  }
+  let peak = 0;
+  x.beginPath();
+  for (let j = 0; j < half; j++){
+    const p = (half > 1 ? j / (half - 1) : 0) * (VZ_N - 1), i = Math.floor(p), f = p - i;
+    const v = VZ.cur[i] * (1 - f) + (VZ.cur[Math.min(VZ_N - 1, i + 1)] || 0) * f;
+    const hh = Math.max(0, v) * amp;
+    if (v > peak) peak = v;
+    x.moveTo(w / 2 + j * step, mid - hh); x.lineTo(w / 2 + j * step, mid + hh);
+    if (j){ x.moveTo(w / 2 - j * step, mid - hh); x.lineTo(w / 2 - j * step, mid + hh); }
+  }
+  x.lineCap = 'round'; x.strokeStyle = VZ.grad;
+  const alive = .4 + .6 * Math.min(1, peak * 2.5);
+  x.globalAlpha = .2 * alive; x.lineWidth = bw * 2.6; x.stroke();
+  x.globalAlpha = alive; x.lineWidth = bw; x.stroke();
+  x.globalAlpha = 1;
+}
+function palTo(cols){ VZ.from = VZ.pal.map(c => c.slice()); VZ.to = cols.map(c => c.slice()); VZ.t0 = performance.now(); kick(); }
+function palStep(t){
+  if (!VZ.to) return false;
+  const p = Math.min(1, (t - VZ.t0) / 900), e = p * p * (3 - 2 * p);
+  VZ.pal = VZ.from.map((c, i) => c.map((v, j) => v + (VZ.to[i][j] - v) * e));
+  if (p >= 1) VZ.to = null;
+  return true;
+}
+
+// ---------- трек (Media Integration Wallpaper Engine: Spotify, браузер, плеєри Windows) ----------
+const M = {title:'', artist:'', playing:false, art:''};
+function showMusic(){
+  const on = P.showmusic && M.playing && !!M.title;
+  $('#svM').classList.toggle('off', !on);
+  $('#mT').textContent = M.title; $('#mA').textContent = M.artist;
+}
+function weColor(s){                       // колір від WE: «r g b» (0…1) або CSS-рядок
+  if (!s) return null;
+  const n = String(s).trim().split(/\s+/).map(Number);
+  if (n.length === 3 && n.every(v => isFinite(v))) return n.map(v => v <= 1 ? v * 255 : v);
+  const m = /^#([0-9a-f]{6})$/i.exec(String(s).trim());
+  return m ? hexRgb('#' + m[1]) : null;
+}
+function setArt(src, ev){
+  M.art = src || '';
+  const img = $('#art');
+  if (!src){ img.removeAttribute('src'); palTo(FALLBACK); return; }
+  img.onload = () => {
+    let cols = artPalette(img);
+    if (!cols && ev){ const a = [ev.primaryColor, ev.secondaryColor, ev.tertiaryColor].map(weColor).filter(Boolean); if (a.length) cols = a.map(c => vivid(c)); }
+    while (cols && cols.length < 3) cols.push(vivid(cols[0], 32));
+    palTo(cols || FALLBACK);
+  };
+  img.src = src;
+}
+if (window.wallpaperRegisterAudioListener) window.wallpaperRegisterAudioListener(audio);
+if (window.wallpaperRegisterMediaPropertiesListener) window.wallpaperRegisterMediaPropertiesListener(e => {
+  M.title = e.title || ''; M.artist = e.artist || ''; showMusic(); });
+if (window.wallpaperRegisterMediaThumbnailListener) window.wallpaperRegisterMediaThumbnailListener(e => setArt(e.thumbnail || '', e));
+if (window.wallpaperRegisterMediaPlaybackListener) window.wallpaperRegisterMediaPlaybackListener(e => {
+  const I = window.wallpaperMediaIntegration || {};
+  const PLAY = I.PLAYBACK_PLAYING != null ? I.PLAYBACK_PLAYING : (I.playback && I.playback.PLAYING != null ? I.playback.PLAYING : 1);
+  M.playing = e.state === PLAY; showMusic(); });
+if (window.wallpaperRegisterMediaStatusListener) window.wallpaperRegisterMediaStatusListener(e => { if (!e.enabled){ M.playing = false; showMusic(); } });
+
+// ---------- налаштування шпалери (project.json → general.properties) ----------
+window.wallpaperPropertyListener = {
+  applyUserProperties(p){
+    const val = k => p[k] && p[k].value;
+    if (p.lang) P.lang = val('lang') === 'ru' ? 'ru' : 'uk';
+    if (p.brightness) P.brightness = +val('brightness') || 80;
+    for (const k of ['showdate', 'showmusic', 'drift', 'h12', 'debug']) if (p[k]) P[k] = !!val(k);
+    document.documentElement.style.setProperty('--br', String(Math.max(.2, Math.min(1, P.brightness / 100))));
+    if (!P.drift) $('#sv').style.transform = '';
+    tick(); showMusic();
+  }
+};
+// перевірка в звичайному браузері: ?demo — штучний звук і трек
+if (/[?&]demo\b/.test(location.search)){
+  let ph = 0;
+  setInterval(() => { ph += .15; const a = new Array(128).fill(0).map((_, i) => { const k = i % 64;
+    return Math.max(0, (.9 - k / 70) * (.55 + .45 * Math.sin(ph + k * .35)) * (k < 58 ? 1 : 0)); }); audio(a); }, 33);
+  M.title = 'A Gladiator’s Dream'; M.artist = 'Demo Artist'; M.playing = true; showMusic();
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 64, 64); gr.addColorStop(0, '#E0452B'); gr.addColorStop(.5, '#F2A33A'); gr.addColorStop(1, '#2B6FE0');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); setArt(c.toDataURL());
+}
+document.documentElement.style.setProperty('--br', String(P.brightness / 100));
+fit(); tick(); kick();
+</script>
+</body>
+</html>

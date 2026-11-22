@@ -1,0 +1,41 @@
+{
+	"file" : "index.html",
+	"general" :
+	{
+		"properties" :
+		{
+			"lang" :
+			{
+				"order" : 0,
+				"text" : "Мова / Язык",
+				"type" : "combo",
+				"value" : "uk",
+				"options" :
+				[
+					{ "label" : "Українська", "value" : "uk" },
+					{ "label" : "Русский", "value" : "ru" }
+				]
+			},
+			"brightness" :
+			{
+				"order" : 1,
+				"text" : "Яскравість",
+				"type" : "slider",
+				"min" : 20,
+				"max" : 100,
+				"value" : 80,
+				"editable" : true
+			},
+			"showdate" : { "order" : 2, "text" : "Дата", "type" : "bool", "value" : true },
+			"showmusic" : { "order" : 3, "text" : "Трек, що грає", "type" : "bool", "value" : true },
+			"h12" : { "order" : 4, "text" : "12-годинний формат", "type" : "bool", "value" : false },
+			"drift" : { "order" : 5, "text" : "Зсув від вигорання (раз на 20 с)", "type" : "bool", "value" : true },
+			"debug" : { "order" : 6, "text" : "Діагностика звуку", "type" : "bool", "value" : false }
+		},
+		"supportsaudioprocessing" : true
+	},
+	"preview" : "preview.jpg",
+	"title" : "Noryx — годинник",
+	"type" : "web",
+	"visibility" : "private"
+}

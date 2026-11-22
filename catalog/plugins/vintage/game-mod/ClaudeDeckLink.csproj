@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Noryx Link — міст між Vintage Story і Noryx (стрім-дек на телефоні).
+    Лише клієнт: шле стан персонажа JSON-ом по UDP на 127.0.0.1:47811 і приймає команди на 127.0.0.1:47812.
+    S&R System (snrsystem), якщо стоїть, — травми й лікування (через його публічні DeckStateJson / DeckTreat).
+
+    Збірка:   dotnet build -c Release
+    Результат: release/claudedecklink_<версія>.zip  (у VintagestoryData/Mods)
+    Шлях до гри можна перевизначити змінною середовища VINTAGE_STORY.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>ClaudeDeckLink</AssemblyName>
+    <RootNamespace>ClaudeDeckLink</RootNamespace>
+    <Version>0.3.0</Version>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <VintageStoryPath Condition="'$(VINTAGE_STORY)' != ''">$(VINTAGE_STORY)</VintageStoryPath>
+    <VintageStoryPath Condition="'$(VintageStoryPath)' == ''">$(HOME)/Games/VintageStory</VintageStoryPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI"><HintPath>$(VintageStoryPath)/VintagestoryAPI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VSEssentials"><HintPath>$(VintageStoryPath)/Mods/VSEssentials.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="VSSurvivalMod"><HintPath>$(VintageStoryPath)/Mods/VSSurvivalMod.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(VintageStoryPath)/Lib/Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="modinfo.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="PackageMod" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <MakeDir Directories="$(MSBuildProjectDirectory)/release" />
+    <ZipDirectory SourceDirectory="$(OutDir)" DestinationFile="$(MSBuildProjectDirectory)/release/claudedecklink_$(Version).zip" Overwrite="true" />
+    <Message Importance="high" Text="Noryx Link packaged: release/claudedecklink_$(Version).zip" />
+  </Target>
+
+</Project>
