@@ -17,12 +17,13 @@
 - **Soundpad** — play sounds "on air" into Discord through a virtual mic.
 - **Plugins and mods** from the built-in catalog — Arduino desk lamp, monitor brightness (DDC), Discord,
   Factorio, Satisfactory, Vintage Story, second screen, looks and layouts.
-- **Updates itself** from this repository; one tap to roll back.
+- **Updates itself**; one tap to roll back.
 - Interface in Ukrainian and Russian.
 
 ## Install
 
-Download the latest build from **[Releases](../../releases)**.
+Download the **[latest release](../../releases/latest)** — `Noryx.zip` (Windows), `Noryx-linux.tar.gz` (Linux)
+and `Noryx.apk` (phone).
 
 **Windows 10/11 (64-bit)**
 1. Extract `Noryx.zip` to a normal folder, e.g. `C:\Noryx` (not straight from the archive).
@@ -34,10 +35,27 @@ Download the latest build from **[Releases](../../releases)**.
 2. `cd ~/Noryx && ./start.sh`
 3. Optional, for hotkeys: `sudo ./system-setup.sh` once.
 
-**Phone (Android 5+)** — same Wi-Fi as the PC. Install `Noryx.apk` from the PC folder; the app finds the PC by
-itself. Or open `http://<PC IP>:8765` in the phone's browser.
+**Phone (Android 5+)** — same Wi-Fi as the PC. Install `Noryx.apk` (it's also in the PC folder); the app finds
+the PC by itself. Or open `http://<PC IP>:8765` in the phone's browser.
 
 More details: `README.txt` in the downloaded folder.
+
+## Updates
+
+New beta versions come out **in batches**, not after every change. Each one is a
+[release](../../releases) with the list of what's new.
+
+You don't need to download anything again: the deck checks for updates by itself and shows
+«Доступне оновлення» (update available) — tap **«Оновити»** (Налаштування → Оновлення / Settings → Updates).
+Settings, sounds and plugins are kept. If something broke after an update, **«Повернути попередню версію»**
+in the same place returns the previous one. (The interface is in Ukrainian and Russian.)
+The phone app offers its own update when a new `Noryx.apk` comes with the deck.
+
+## Found a bug?
+
+[Open an issue](../../issues/new/choose) and describe what you did and what happened. It helps a lot to attach the
+report from the deck: tap the **CPU/GPU load block in the dock** → «Діагностика» (Diagnostics) →
+**«Звіт для розробника»** (Report for the developer). It creates a zip; passwords and tokens are removed from it.
 
 ## Privacy and security
 
@@ -58,11 +76,22 @@ The source code is visible for transparency, but it is **not** open source.
 **Noryx** — стрім-дек на телефоні для твого ПК (Windows і Linux). Зараз — **відкрите бета-тестування**:
 щось може не працювати, пиши про це в [Issues](../../issues/new/choose).
 
-**Встановлення:** завантаж збірку з [Releases](../../releases).
-Windows — розпакуй `Noryx.zip` у звичайну теку (наприклад `C:\Noryx`) і запусти `Start.bat`.
-Linux — розпакуй `Noryx-linux.tar.gz` і запусти `./start.sh`.
-Телефон — у тому самому Wi-Fi, встанови `Noryx.apk` з теки на ПК, застосунок сам знайде комп'ютер.
+**Встановлення.** Завантаж **[останній реліз](../../releases/latest)**.
+- Windows — розпакуй `Noryx.zip` у звичайну теку (наприклад `C:\Noryx`) і запусти `Start.bat`.
+  Телефон не підключається — запусти `Firewall.bat` від адміністратора.
+- Linux — розпакуй `Noryx-linux.tar.gz` і запусти `./start.sh`.
+- Телефон — у тому самому Wi-Fi, встанови `Noryx.apk`, застосунок сам знайде комп'ютер.
+
 Докладно — `README_UA.txt` у теці.
+
+**Оновлення.** Нові бета-версії виходять **пачками**, не після кожної зміни; кожна — [реліз](../../releases) зі
+списком змін. Перекачувати нічого не треба: дек сам скаже «Доступне оновлення» — тисни **«Оновити»**
+(або Налаштування → Оновлення). Налаштування, звуки й плагіни лишаються. Після оновлення щось зламалось —
+**Налаштування → Оновлення → «Повернути попередню версію»**.
+
+**Знайшов баг?** [Створи issue](../../issues/new/choose): що робив і що сталося. Дуже допоможе звіт із дека:
+натисни **блок завантаження ЦП/ГП у доку** → «Діагностика» → **«Звіт для розробника»** — zip, паролі й токени
+з нього прибрані.
 
 Дек працює лише у твоїй локальній мережі; налаштування, звуки й логи лишаються на ПК.
 Безкоштовно для особистого користування; код відкритий для перегляду, але це **не** open source (див. LICENSE).

@@ -6,9 +6,10 @@ body:
     attributes:
       value: |
         Thanks for testing Noryx! / Дякуємо за тестування!
-        **Tip / Порада:** on the deck — Settings → Diagnostics → «Звіт для розробника» creates a zip you can attach
-        (passwords and tokens are removed from it). / у деку — Налаштування → Діагностика → «Звіт для розробника»
-        створить zip, його можна прикріпити (паролі й токени з нього прибрані).
+        **Tip / Порада:** on the deck tap the CPU/GPU load block in the dock → «Діагностика» → «Звіт для розробника»:
+        it creates a zip you can attach (passwords and tokens are removed from it). / у деку натисни блок
+        завантаження ЦП/ГП у доку → «Діагностика» → «Звіт для розробника» — створить zip, його можна прикріпити
+        (паролі й токени з нього прибрані).
   - type: textarea
     id: what
     attributes:
