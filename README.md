@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.svg" width="128" alt="Noryx"></p>
+
 # Noryx
 
 **Turn your Android phone into a stream deck for your PC.** Windows and Linux (KDE Plasma / PipeWire).

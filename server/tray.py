@@ -73,15 +73,8 @@ def spawn_restart():
 
 
 def _image():
-    from PIL import Image, ImageDraw
-    s = 64
-    im = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((2, 2, s - 3, s - 3), radius=14, fill=(167, 139, 250, 255))
-    for x in (14, 35):
-        for y in (14, 35):
-            d.rounded_rectangle((x, y, x + 15, y + 15), radius=4, fill=(14, 16, 20, 255))
-    return im
+    import logo
+    return logo.image(64)
 
 
 class Tray:

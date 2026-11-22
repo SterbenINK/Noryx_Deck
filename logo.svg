@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B1130"/><stop offset="1" stop-color="#0A0711"/></linearGradient>
+<linearGradient id="ac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C896FF"/><stop offset="1" stop-color="#7C3AED"/></linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#A855F7" stop-opacity=".55"/><stop offset="1" stop-color="#A855F7" stop-opacity="0"/></radialGradient>
+<mask id="bite"><rect width="512" height="512" fill="#fff"/><circle cx="330" cy="200" r="118" fill="#000"/></mask>
+</defs><rect x="16" y="16" width="480" height="480" rx="124" fill="url(#bg)"/><rect x="104" y="104" width="138" height="138" rx="38" fill="#2A2140"/>
+<rect x="270" y="104" width="138" height="138" rx="38" fill="url(#ac)"/>
+<rect x="104" y="270" width="138" height="138" rx="38" fill="#EEEAF8"/>
+<circle cx="339" cy="339" r="69" fill="none" stroke="#EEEAF8" stroke-width="22"/><circle cx="339" cy="300" r="11" fill="#EEEAF8"/></svg>

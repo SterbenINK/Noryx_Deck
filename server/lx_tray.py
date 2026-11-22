@@ -102,15 +102,8 @@ def spawn_restart():
 
 
 def _image(size):
-    from PIL import Image, ImageDraw
-    k = size / 64
-    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((2 * k, 2 * k, size - 3 * k, size - 3 * k), radius=14 * k, fill=(167, 139, 250, 255))
-    for x in (14, 35):
-        for y in (14, 35):
-            d.rounded_rectangle((x * k, y * k, (x + 15) * k, (y + 15) * k), radius=4 * k, fill=(14, 16, 20, 255))
-    return im
+    import logo
+    return logo.image(size)
 
 
 def _pixmaps():
@@ -127,8 +120,7 @@ def _pixmaps():
 def write_icon():
     try:
         ICON_FILE.parent.mkdir(parents=True, exist_ok=True)
-        if not ICON_FILE.exists():
-            _image(256).save(ICON_FILE)
+        _image(256).save(ICON_FILE)                 # каждый раз: сменился логотип — сменился и значок ярлыка
     except Exception:
         log.exception("иконка")
 
