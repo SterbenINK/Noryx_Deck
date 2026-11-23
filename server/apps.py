@@ -718,7 +718,7 @@ def show(item, toggle=False):
         return "hidden"
     on_top = _WIN.activate(wins[0])
     log.info("Показываю окно: %s%s", item.get("label") or proc,
-             "" if on_top else i18n.tr(" (наверх Windows не пустила)", " (нагору Windows не пустила)"))
+             "" if on_top else i18n.tr(" (Windows didn't let it come to the front)", " (нагору Windows не пустила)"))
     return "shown"
 
 
@@ -808,8 +808,8 @@ def ask_files(title, filters, multi=False, start=None):
 
 def pick_exe():
     """Открывает на ПК стандартное окно выбора .exe (блокирует, вызывать в отдельном потоке)."""
-    files = ask_files(i18n.tr("Noryx — выбери программу", "Noryx — обери програму"),
-                      [(i18n.tr("Программы", "Програми"), "*.exe;*.lnk;*.bat;*.cmd"), (i18n.tr("Все файлы", "Усі файли"), "*.*")])
+    files = ask_files(i18n.tr("Noryx — choose an app", "Noryx — обери програму"),
+                      [(i18n.tr("Programs", "Програми"), "*.exe;*.lnk;*.bat;*.cmd"), (i18n.tr("All files", "Усі файли"), "*.*")])
     f = files[0] if files else ""
     if not f:
         return None

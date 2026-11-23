@@ -13,13 +13,17 @@ import sys
 import threading
 import time
 
-NAME = {"ru": "Factorio", "uk": "Factorio"}
-ABOUT = {"ru": "Статистика завода: электричество, загрязнение, производство, наука, враги — графики. Нужен мод игры Noryx Link",
+NAME = {"en": "Factorio", "uk": "Factorio"}
+ABOUT = {"en": "Factory stats: electricity, pollution, production, science, enemies — charts. Needs the "
+               "Noryx Link game mod",
          "uk": "Статистика заводу: електрика, забруднення, виробництво, наука, вороги — графіки. Потрібен мод гри Noryx Link"}
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = ["files"]
-VERSION = "1.0.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
-CHANGES = [("1.0.0", "Первая версия в каталоге: электричество, производство, наука, графики",
+VERSION = "1.1.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
+CHANGES = [("1.1.0", "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+            "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"),
+           ("1.0.0", "First version in the catalog: electricity, production, science, charts",
             "Перша версія в каталозі: електрика, виробництво, наука, графіки")]
 REL = os.path.join("script-output", "noryx", "factorio.json")
 LIVE = 15.0                                   # столько секунд файл не обновлялся — «нет данных от игры»
@@ -28,27 +32,27 @@ LIVE = 15.0                                   # столько секунд фа
 THEME = {"bg": "#1F1E1D", "panel": "#2F2E2C", "border": "#121110", "text": "#ECE5D6", "muted": "#A39D90",
          "accent": "#F4A300", "radius": 4}
 
-RANGES = [("m1", 12, ("1 мин", "1 хв"), (("-1 мин", "-1 хв"), ("-30 с", "-30 с"))),
-          ("m10", 60, ("10 мин", "10 хв"), (("-10 мин", "-10 хв"), ("-5 мин", "-5 хв"))),
-          ("h1", 60, ("1 ч", "1 год"), (("-1 ч", "-1 год"), ("-30 мин", "-30 хв"))),
-          ("h10", 60, ("10 ч", "10 год"), (("-10 ч", "-10 год"), ("-5 ч", "-5 год")))]
+RANGES = [("m1", 12, ("1 min", "1 хв"), (("-1 min", "-1 хв"), ("-30 s", "-30 с"))),
+          ("m10", 60, ("10 min", "10 хв"), (("-10 min", "-10 хв"), ("-5 min", "-5 хв"))),
+          ("h1", 60, ("1 h", "1 год"), (("-1 h", "-1 год"), ("-30 min", "-30 хв"))),
+          ("h10", 60, ("10 h", "10 год"), (("-10 h", "-10 год"), ("-5 h", "-5 год")))]
 
 # вкладка: (название ru/uk, значок, цвет, главный показатель, единица, si, линии графика, топ)
 TABS = {
-    "power": (("Электричество", "Електрика"), "⚡", "#F4C430", "pc", "W", True,
-              [("pp", ("Выработка", "Вироблено"), "#3DDC6A", True), ("pc", ("Потребление", "Спожито"), "#F4A300", False)],
-              ("pc", ("Больше всех потребляют", "Найбільше споживають"))),
-    "pollution": (("Загрязнение", "Забруднення"), "☁", "#9DB36B", "pe", "/мин", True,
-                  [("pe", ("Выбросы", "Викиди"), "#C08A4A", True), ("pa", ("Поглощение", "Поглинання"), "#5E9A3A", False)],
-                  ("pe", ("Больше всех загрязняют", "Найбільше забруднюють"))),
-    "items": (("Производство", "Виробництво"), "⚙", "#E39B3A", "im", "/мин", True,
-              [("im", ("Сделано", "Зроблено"), "#E39B3A", True), ("iu", ("Потрачено", "Витрачено"), "#7FB2D9", False)],
-              ("im", ("Больше всего делается", "Найбільше робиться"))),
-    "science": (("Наука", "Наука"), "⚗", "#5DA9E9", "sc", "/мин", True,
-                [("sc", ("Наука в лаборатории", "Наука в лабораторії"), "#5DA9E9", True)],
-                ("sc", ("По видам", "За видами"))),
-    "enemies": (("Враги", "Вороги"), "☣", "#C8432F", "ev", "%", False,
-                [("ev", ("Эволюция", "Еволюція"), "#C8432F", True)],
+    "power": (("Electricity", "Електрика"), "⚡", "#F4C430", "pc", "W", True,
+              [("pp", ("Generation", "Вироблено"), "#3DDC6A", True), ("pc", ("Consumption", "Спожито"), "#F4A300", False)],
+              ("pc", ("Top consumers", "Найбільше споживають"))),
+    "pollution": (("Pollution", "Забруднення"), "☁", "#9DB36B", "pe", "/min", True,
+                  [("pe", ("Emissions", "Викиди"), "#C08A4A", True), ("pa", ("Absorption", "Поглинання"), "#5E9A3A", False)],
+                  ("pe", ("Top polluters", "Найбільше забруднюють"))),
+    "items": (("Production", "Виробництво"), "⚙", "#E39B3A", "im", "/min", True,
+              [("im", ("Made", "Зроблено"), "#E39B3A", True), ("iu", ("Spent", "Витрачено"), "#7FB2D9", False)],
+              ("im", ("Made the most", "Найбільше робиться"))),
+    "science": (("Science", "Наука"), "⚗", "#5DA9E9", "sc", "/min", True,
+                [("sc", ("Science in labs", "Наука в лабораторії"), "#5DA9E9", True)],
+                ("sc", ("By type", "За видами"))),
+    "enemies": (("Enemies", "Вороги"), "☣", "#C8432F", "ev", "%", False,
+                [("ev", ("Evolution", "Еволюція"), "#C8432F", True)],
                 None),
 }
 ORDER = ["power", "pollution", "items", "science", "enemies"]
@@ -167,7 +171,7 @@ class Plugin:
         return v if isinstance(v, (int, float)) else None
 
     def unit(self, u):
-        return self.api.tr(u, u.replace("/мин", "/хв"))
+        return self.api.tr(u, u.replace("/min", "/хв"))
 
     def fmt(self, key, unit, use_si=True):
         v = self.now(key)
@@ -185,39 +189,39 @@ class Plugin:
         return {
             "theme": THEME,
             "mode": {"name": "Factorio", "icon": "gauge", "color": "#F4A300",
-                     "sub": {"ru": f"Завод: {pretty(self.where())}" if live else "Нет данных от игры",
+                     "sub": {"en": f"Factory: {pretty(self.where())}" if live else "No data from the game",
                              "uk": f"Завод: {pretty(self.where())}" if live else "Немає даних від гри"}},
             "dock": [{"type": "card", "go": "mode", "title": "Factorio", "icon": "⚙", "items": note + [
                 {"type": "text", "label": "⚡", "value": self.fmt("pc", "W")},           # коротко: док узкий
-                {"type": "text", "label": "☁", "value": self.fmt("pe", "/мин")},
-                {"type": "text", "label": "⚗", "value": self.fmt("sc", "/мин")}]}],
+                {"type": "text", "label": "☁", "value": self.fmt("pe", "/min")},
+                {"type": "text", "label": "⚗", "value": self.fmt("sc", "/min")}]}],
             "screen": [{"type": "grid", "widths": [1, 3.6], "fill": True, "items": [
                 {"type": "grid", "cols": 1, "items": self.tabs()},
                 {"type": "card", "scroll": True, "items": note + self.page()}]}],
             "settings": [
-                {"type": "text", "label": tr("Мод игры", "Мод гри"),
-                 "value": tr("на связи", "на зв'язку") if live else tr("нет данных", "немає даних")},
-                {"type": "text", "label": tr("Файл", "Файл"), "value": self.file or self.files()[0]},
-                *([{"type": "text", "label": tr("Электросети", "Електромережі"), "value": tr(
-                    f'номеров {self.data["nets"].get("ids", 0)} → разных {self.data["nets"].get("real", 0)}',
-                    f'номерів {self.data["nets"].get("ids", 0)} → різних {self.data["nets"].get("real", 0)}')}]
+                {"type": "text", "label": tr("Game mod", "Мод гри"),
+                 "value": tr("online", "на зв'язку") if live else tr("no data", "немає даних")},
+                {"type": "text", "label": tr("File", "Файл"), "value": self.file or self.files()[0]},
+                *([{"type": "text", "label": tr("Power grids", "Електромережі"), "value": tr(
+                    "{0} IDs → {1} distinct", "номерів {0} → різних {1}", self.data['nets'].get('ids', 0), self.data['nets'].get('real', 0))}]
                   if isinstance(self.data.get("nets"), dict) else []),
                 *([{"type": "label", "style": "line", "color": "#E07A4F",
-                    "label": tr("Мод игры не смог прочесть: ", "Мод гри не зміг прочитати: ") + str(self.data["err"])[:300]}]
+                    "label": tr("The game mod couldn't read: ", "Мод гри не зміг прочитати: ") + str(self.data["err"])[:300]}]
                   if self.data.get("err") else []),
                 {"type": "label", "style": "line", "label": tr(
-                    "Мод Noryx Link (game-mod) — в папку mods игры. Своя папка данных игры — ниже (пусто — как обычно).",
+                    "Noryx Link mod (game-mod) — into the game's mods folder. Your own game data folder — "
+                    "below (empty — the usual one).",
                     "Мод Noryx Link (game-mod) — у теку mods гри. Своя тека даних гри — нижче (порожньо — як зазвичай).")},
-                {"type": "input", "id": "dir", "placeholder": self.api.cfg.get("dir") or tr("Папка данных Factorio", "Тека даних Factorio"),
-                 "button": tr("Сохранить", "Зберегти")}],
+                {"type": "input", "id": "dir", "placeholder": self.api.cfg.get("dir") or tr("Factorio data folder", "Тека даних Factorio"),
+                 "button": tr("Save", "Зберегти")}],
         }
 
     def why(self):
         tr = self.api.tr
         if not self.data:
-            return tr("Нет данных от игры: запусти Factorio с модом Noryx Link.",
+            return tr("No data from the game: start Factorio with the Noryx Link mod.",
                       "Немає даних від гри: запусти Factorio з модом Noryx Link.")
-        return tr("Игра на паузе или закрыта — показываю последние данные.",
+        return tr("The game is paused or closed — showing the last data.",
                   "Гра на паузі або закрита — показую останні дані.")
 
     def tabs(self):
@@ -226,16 +230,16 @@ class Plugin:
             (ru, uk), icon, col, key, unit, use_si, _lines, _top = TABS[k]
             sub = ""
             if k == "power":
-                sub = tr("выработка ", "вироблено ") + self.fmt("pp", "W")
+                sub = tr("generation ", "вироблено ") + self.fmt("pp", "W")
             elif k == "pollution":
-                sub = tr("всего ", "всього ") + self.fmt("pt", "", True)
+                sub = tr("total ", "всього ") + self.fmt("pt", "", True)
             elif k == "items":
-                sub = tr("потрачено ", "витрачено ") + self.fmt("iu", "/мин")
+                sub = tr("spent ", "витрачено ") + self.fmt("iu", "/min")
             elif k == "science":
                 r = self.data.get("research") or {}
-                sub = f'{pretty(r.get("name"))} {r.get("progress", 0):g}%' if r.get("name") else tr("ничего не изучается", "нічого не вивчається")
+                sub = f'{pretty(r.get("name"))} {r.get("progress", 0):g}%' if r.get("name") else tr("nothing being researched", "нічого не вивчається")
             elif k == "enemies":
-                sub = tr("убито ", "вбито ") + self.fmt("kl", "/мин")
+                sub = tr("killed ", "вбито ") + self.fmt("kl", "/min")
             out.append({"type": "stat", "id": "tab:" + k, "on": self.tab == k, "icon": icon, "color": col,
                         "label": tr(ru, uk), "value": self.fmt(key, unit, use_si) if k != "enemies" else self.fmt("ev", "%", False),
                         "sub": sub})
@@ -250,7 +254,7 @@ class Plugin:
         tr = self.api.tr
         (ru, uk), icon, col, key, unit, use_si, lines, top = TABS[self.tab]
         rng = next(r for r in RANGES if r[0] == self.range)
-        n, xs = rng[1], [tr(*rng[3][0]), tr(*rng[3][1]), tr("сейчас", "зараз")]
+        n, xs = rng[1], [tr(*rng[3][0]), tr(*rng[3][1]), tr("now", "зараз")]
         head = [{"type": "row", "items": [{"type": "button", "id": "range:" + r[0], "label": tr(*r[2]), "on": r[0] == self.range}
                                           for r in RANGES]}]
         chart = {"type": "chart", "label": f"{icon} {tr(ru, uk)}", "sub": pretty(self.where()) if self.data else "",
@@ -261,16 +265,16 @@ class Plugin:
         body = head + [chart]
         if self.tab == "science":
             r = self.data.get("research") or {}
-            body.append({"type": "bar", "label": tr("Исследуется: ", "Досліджується: ") + (pretty(r["name"]) if r.get("name") else "—"),
+            body.append({"type": "bar", "label": tr("Researching: ", "Досліджується: ") + (pretty(r["name"]) if r.get("name") else "—"),
                          "value": r.get("progress", 0) if r.get("name") else 0, "max": 100, "color": "#5DA9E9", "size": 10,
                          "text": f'{r.get("progress", 0):g}%' if r.get("name") else ""})
         if self.tab == "enemies":
             body.append({"type": "grid", "cols": 2, "items": [
-                {"type": "stat", "icon": "☣", "label": tr("Эволюция", "Еволюція"), "value": self.fmt("ev", "%", False), "color": "#C8432F"},
-                {"type": "stat", "icon": "⚔", "label": tr("Убито в минуту", "Вбито за хвилину"), "value": self.fmt("kl", "")}]})
+                {"type": "stat", "icon": "☣", "label": tr("Evolution", "Еволюція"), "value": self.fmt("ev", "%", False), "color": "#C8432F"},
+                {"type": "stat", "icon": "⚔", "label": tr("Killed per minute", "Вбито за хвилину"), "value": self.fmt("kl", "")}]})
         tops = [top] if top else []
         if self.tab == "power":                 # у электричества — и кто вырабатывает
-            tops.append(("pp", ("Больше всех вырабатывают", "Найбільше виробляють"), "#3DDC6A"))
+            tops.append(("pp", ("Top generators", "Найбільше виробляють"), "#3DDC6A"))
         for t in tops:
             rows = lst((self.data.get("top") or {}).get(t[0]))[:8]
             rows = [r for r in rows if isinstance(r, list) and len(r) == 2 and isinstance(r[1], (int, float))]

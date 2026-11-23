@@ -193,7 +193,7 @@ def type_text(text):
                 _emit(fd, EV_KEY, KEY["shift"], 0)
                 _emit(fd, EV_SYN, SYN_REPORT, 0)
             time.sleep(0.006)
-    log.info("Текст: %d символов%s", len(text), i18n.tr(", пропущено ", ", пропущено ") + str(skipped) if skipped else "")
+    log.info("Текст: %d символов%s", len(text), i18n.tr(", skipped ", ", пропущено ") + str(skipped) if skipped else "")
     return skipped
 
 

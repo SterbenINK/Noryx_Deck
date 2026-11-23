@@ -1,45 +1,131 @@
 """Язык сервера: тексты на ПК (окна выбора файлов, ярлык в меню) и лог logs/server.log.
 
-В коде сообщения лога пишутся по-русски шаблоном (log.info("Кнопка «%s»", x)); если в настройках дека
-украинский — фильтр подменяет шаблон переводом из UK. Новый шаблон лога с кириллицей — допиши перевод сюда
-(tests/test_i18n.py проверяет, что ничего не забыто). Только стандартная библиотека.
+В коде сообщения лога пишутся по-русски шаблоном (log.info("Кнопка «%s»", x)); фильтр подменяет шаблон: украинский
+дек — переводом из UK, остальные — английским из EN (а мовний пакет переводит английский шаблон). Новый шаблон лога с
+кириллицей — допиши перевод в UK и EN (tests/test_i18n.py проверяет, что ничего не забыто). Только стандартная библиотека.
 """
 import json
 import logging
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LANG = "ru"          # дек ставит язык из настроек при запуске и при смене
+LANG = "en"          # дек ставит язык из настроек при запуске и при смене
+PACK = {}            # строки текущего мовного пакета: англ. текст → перевод (не для en / uk — у тех строки в коде)
+PLUG = {}            # переводы плагинов и модов из пакета: {"<id>": {английский текст плагина: перевод}}
+
+# Языки дека: код → своё название (так пишется в списке). en и uk — в самом коде, остальные — пакеты из каталога.
+NAMES = {"en": "English", "en-GB": "English (UK)", "uk": "Українська", "de": "Deutsch", "fr": "Français",
+         "es": "Español", "it": "Italiano", "ko": "한국어", "zh": "中文", "ja": "日本語"}
+BUILTIN = ("en", "uk")
+LANG_DIR = ROOT / "langs"                     # скачанные пакеты: langs/<код>.json
+
+
+def norm(lang):
+    """Код языка из настроек. Русского больше нет: прежний ru → uk; неизвестное — en."""
+    if lang == "ru":
+        return "uk"
+    return lang if lang in NAMES else "en"
 
 
 def config_lang(root=ROOT):
-    """Язык из data/config.json — пока дек ещё не загрузил конфиг (и для помощника обновления)."""
     try:
-        lang = json.loads((Path(root) / "data" / "config.json").read_text(encoding="utf-8"))["cfg"]["lang"]
-        return "uk" if lang == "uk" else "ru"
+        return norm(json.loads((Path(root) / "data" / "config.json").read_text(encoding="utf-8"))["cfg"]["lang"])
     except Exception:
-        return "ru"
+        return "en"
 
 
-def set_lang(lang):
-    global LANG
-    LANG = "uk" if lang == "uk" else "ru"
+def _strs(s):
+    return {k: v for k, v in s.items() if isinstance(k, str) and isinstance(v, str)} if isinstance(s, dict) else {}
+
+
+def load_pack(lang, root=ROOT, part="strings"):
+    """Строки пакета langs/<код>.json (сервер и страница — одни ключи) или, part="plugins", переводы плагинов и модов
+    {id: {строка: перевод}}. Нет файла / битый — пусто (будет английский)."""
+    if lang in BUILTIN:
+        return {}
+    try:
+        d = json.loads((Path(root) / "langs" / f"{lang}.json").read_text(encoding="utf-8"))
+        s = d.get(part) if isinstance(d, dict) else None
+        if part == "plugins":
+            return {k: _strs(v) for k, v in s.items() if isinstance(k, str)} if isinstance(s, dict) else {}
+        return _strs(s)
+    except (OSError, ValueError):
+        return {}
+
+
+def set_lang(lang, root=ROOT):
+    global LANG, PACK, PLUG
+    LANG = norm(lang)
+    PACK = load_pack(LANG, root)
+    PLUG = load_pack(LANG, root, "plugins")
+
+
+def follow(lang, root=ROOT):
+    """Язык из конфига сменился (любой дорогой: страница «Мови», cfg, тесты) — пакет подгружаем один раз."""
+    if norm(lang) != LANG:
+        set_lang(lang, root)
+
+
+def ptext(pid, v):
+    """Название / описание плагина или мода: строка или {"en": …, "uk": …, "<код>": …} (старые — {"ru", "uk"}).
+    Нет своего текста на языке дека — перевод из пакета (PLUG[id]) по английскому, потом английский."""
+    if isinstance(v, dict):
+        if v.get(LANG):
+            return str(v[LANG])
+        first = next((str(x) for x in v.values() if x), "")
+        if LANG == "uk":
+            return str(v.get("uk") or v.get("en") or v.get("ru") or first)
+        base = str(v.get("en") or v.get("ru") or v.get("uk") or first)
+    else:
+        base = "" if v is None else str(v)
+    return base if LANG == "uk" else PLUG.get(pid, {}).get(base, base)
+
+
+def ptr(pid, base, uk_text, *args):
+    """api.tr плагина: первый текст — основной язык плагина (LANGS; в комплекте — английский), второй — украинский."""
+    s = uk_text if LANG == "uk" else PLUG.get(pid, {}).get(base, base)
+    if args:
+        try:
+            return s.format(*args)
+        except (IndexError, KeyError, ValueError):
+            return base.format(*args)
+    return s
+
+
+def speaks(pid, langs):
+    """Плагин / мод с LANGS говорит на языке дека: заявил его сам или его тексты есть в мовном пакете. LANGS нет — None."""
+    if not langs:
+        return None
+    return LANG in langs or bool(PLUG.get(pid)) or (LANG == "en-GB" and "en" in langs)
 
 
 def uk():
     return LANG == "uk"
 
 
-def tr(ru, uk_text):
-    return uk_text if LANG == "uk" else ru
+def tr(en, uk_text, *args):
+    """Текст на языке дека: в коде — английский и украинский, остальные языки — из пакета (нет строки — английский).
+    Подстановки — {0} {1}…: tr("Group «{0}»", "Група «{0}»", имя) — ключ пакета без самих значений."""
+    s = uk_text if LANG == "uk" else (PACK.get(en, en) if PACK else en)
+    if args:
+        try:
+            return s.format(*args)
+        except (IndexError, KeyError, ValueError):       # перевод в пакете испорчен — английский
+            return en.format(*args)
+    return s
 
 
 class LogFilter(logging.Filter):
     """Ставится на обработчики лога: шаблон сообщения — на языке дека."""
 
     def filter(self, record):
-        if LANG == "uk" and isinstance(record.msg, str):
-            record.msg = UK.get(record.msg, record.msg)
+        if isinstance(record.msg, str):
+            if LANG == "uk":
+                record.msg = UK.get(record.msg, record.msg)
+            elif record.msg in EN:                  # английский, потом мовний пакет по английскому шаблону
+                en = EN[record.msg]
+                tr_ = PACK.get(en, en) if PACK else en
+                record.msg = tr_ if tr_.count("%") == en.count("%") else en
         return True
 
 
@@ -299,6 +385,7 @@ UK = {
     "Значок в трее недоступен (%s). Остановить сервер: stop.bat": "Значок у треї недоступний (%s). Зупинити сервер: stop.bat",
     "трей": "трей",
     "Не открылось: %s": "Не відкрилося: %s",
+    "Трей / ярлык на новом языке: %s": "Трей / ярлик новою мовою: %s",
     "автозапуск": "автозапуск",
     "уведомление трея": "сповіщення трею",
     # update.py
@@ -313,4 +400,242 @@ UK = {
     # мод vintage (Vintage Story)
     "vintage: порт %s занят: %s": "vintage: порт %s зайнятий: %s",
     "vintage: игра на связи": "vintage: гра на зв'язку",
+}
+
+# Лог по-английски (и для мовних пакетов — их ключ английский шаблон): русский шаблон из кода → английский.
+EN = {
+    "Необработанная ошибка": "Unhandled error",
+    "Не удалось загрузить модули. Переустанови библиотеки: install.bat, а в переносной версии — удали папку python (на Linux — .venv) и запусти Start.bat / start.sh.": "Couldn't load modules. Reinstall the libraries: install.bat, and in the portable version delete the python folder (on Linux — .venv) and run Start.bat / start.sh.",
+    "Noryx %s запускается…%s": "Noryx %s is starting…%s",
+    "Слушаю порт %d": "Listening on port %d",
+    "На этом ПК:   %s": "On this PC:   %s",
+    "С телефона:   %s": "From a phone: %s",
+    "Останавливаюсь…": "Stopping…",
+    "Подключился клиент %s (всего %d)": "Client connected %s (total %d)",
+    "Плагин «%s»: не удалось удалить: %s": "Plugin «%s»: couldn't delete: %s",
+    "Плагин «%s» удалён": "Plugin «%s» deleted",
+    "Мод «%s»: не удалось удалить: %s": "Mod «%s»: couldn't delete: %s",
+    "Мод «%s» удалён": "Mod «%s» deleted",
+    "Стёрта прежняя корзина %s": "Old trash erased %s",
+    "Лог изменений новой версии не получен: %s": "Changelog of the new version not received: %s",
+    "пункт обновления в меню трея": "update item in the tray menu",
+    "Раскладка с телефона: отброшено плиток — %d": "Layout from the phone: tiles dropped — %d",
+    "Новое своё устройство: %s (%s)": "New own device: %s (%s)",
+    "Неизвестное устройство %s: %s — жду код": "Unknown device %s: %s — waiting for the code",
+    "Отказ %s: соединение открывает чужая страница (%s)": "Refused %s: the connection is opened by a foreign page (%s)",
+    "Устройство %s: неверный код подключения": "Device %s: wrong pairing code",
+    "Устройство забыто: %s": "Device forgotten: %s",
+    "Мод «%s»: сохранён редактором вида (%s)": "Mod «%s»: saved by the look editor (%s)",
+    "Редактор вида: %s": "Look editor: %s",
+    "Мод «%s»: %s": "Mod «%s»: %s",
+    "Мод «%s»: новый или изменился — жду выбора «было / стало»": "Mod «%s»: new or changed — waiting for «before / after» choice",
+    "Каталог плагинов: %s": "Plugin catalog: %s",
+    "Каталог плагинов": "Plugin catalog",
+    "Каталог: «%s» не скачался: %s": "Catalog: «%s» didn't download: %s",
+    "Каталог: «%s» не встал: %s": "Catalog: «%s» didn't install: %s",
+    "Каталог: «%s» %s → %s": "Catalog: «%s» %s → %s",
+    "Каталог: «%s» откатан к %s": "Catalog: «%s» rolled back to %s",
+    "Каталог: «%s» не откатился: %s": "Catalog: «%s» didn't roll back: %s",
+    "Обновление: плагины больше не в сборке — оставил у себя: %s": "Update: plugins are no longer in the build — kept them: %s",
+    "Плагины после обновления": "Plugins after the update",
+    "Порядок в папках плагинов и модов": "Order in the plugin and mod folders",
+    "Не закрываю %s: %s": "Not closing %s: %s",
+    "микрофон: %s": "microphone: %s",
+    "Не на своём месте: %s — в %s уже есть такое имя, оставляю": "Out of place: %s — %s already has this name, leaving it",
+    "Переложил %s → %s": "Moved %s → %s",
+    "Убрал пустую папку %s": "Removed empty folder %s",
+    "Не получилось разложить %s: %s": "Couldn't sort %s: %s",
+    "Роль «%s»: отказ в «%s»": "Role «%s»: refused «%s»",
+    "Роль устройства %s: %s": "Device role %s: %s",
+    "Код подключения введён неверно %d раз — пауза %d с": "Pairing code entered wrong %d times — pause %d s",
+    "Список своих устройств повреждён — начинаю заново (телефоны введут код ещё раз)": "The list of own devices is damaged — starting over (phones will enter the code again)",
+    "Список своих устройств не сохранён: %s": "The list of own devices wasn't saved: %s",
+    "Подключение по коду: %d мин прежние телефоны заходят без кода": "Pairing by code: for %d min previous phones get in without a code",
+    "Порт %d занят другой программой — сервер не запущен": "Port %d is taken by another program — server not started",
+    "Автопоиск для приложения: UDP %d": "Auto-discovery for the app: UDP %d",
+    "Значок в трее готов": "Tray icon ready",
+    "Соединения не закрылись за 5 с — выхожу, не дожидаясь": "Connections didn't close in 5 s — exiting without waiting",
+    "Новая копия запущена": "New copy started",
+    "Скрипт «%s»: готово (%d раз)": "Script «%s»: done (%d times)",
+    "Клиент отключился %s": "Client disconnected %s",
+    "Wake-on-LAN: не определить MAC сетевой карты: %s": "Wake-on-LAN: can't determine the network card MAC: %s",
+    "Приложение %s ищет ПК — ответил %s": "App %s is looking for the PC — answered %s",
+    "Дек уже запущен — открываю его в браузере": "The deck is already running — opening it in the browser",
+    "Автопоиск недоступен (UDP %d занят: %s) — в приложении можно ввести адрес вручную": "Auto-discovery unavailable (UDP %d busy: %s) — the address can be entered manually in the app",
+    "Выхожу: дальше работает помощник обновления (logs/update.log)": "Exiting: the update helper continues (logs/update.log)",
+    "Сервер упал": "Server crashed",
+    "Кнопка %s": "Button %s",
+    "Скрипт «%s»: остановлен": "Script «%s»: stopped",
+    "Скрипт «%s»: %s": "Script «%s»: %s",
+    "Сервер завис на %.0f с. Стеки потоков:\n%s": "Server hung for %.0f s. Thread stacks:\n%s",
+    "Режим %s: убрал ненайденные программы (%d)": "Mode %s: removed apps that weren't found (%d)",
+    "Автозапуск %s: %s": "Autostart %s: %s",
+    "Сообщение: %s": "Message: %s",
+    "Группа %s: %s — %s": "Group %s: %s — %s",
+    "Группа «%s»: %s": "Group «%s»: %s",
+    "Окно выбора файла": "File picker",
+    "Новый режим «%s» (%s)": "New mode «%s» (%s)",
+    "Удалён режим «%s» (%s)": "Mode deleted «%s» (%s)",
+    "Клавиша %s: %s": "Key %s: %s",
+    "Выбор звуков": "Sound picker",
+    "Смена выхода": "Output change",
+    "Режим «%s»: сетка %d×%d": "Mode «%s»: grid %d×%d",
+    "Обновление из файла: %s": "Update from file: %s",
+    "%s: окна нет (свёрнута в трей?) — запускаю ещё раз, она покажет его сама": "%s: no window (minimized to tray?) — launching again, it will show it itself",
+    "Окно %s: %s": "Window %s: %s",
+    "Автопереключение: %s → %s": "Auto-switch: %s → %s",
+    "Диагностика": "Diagnostics",
+    "Диагностика, %s: %s": "Diagnostics, %s: %s",
+    "Диагностика: замер шёл %s с": "Diagnostics: the measurement took %s s",
+    "Визуализатор: захват включён": "Visualizer: capture on",
+    "Визуализатор: захват выключен": "Visualizer: capture off",
+    "Визуализатор: нет захвата звука (%s)": "Visualizer: no sound capture (%s)",
+    "Визуализатор: %s": "Visualizer: %s",
+    "Визуализатор: нет захвата звука": "Visualizer: no sound capture",
+    "Запуск: %s (%s)": "Launch: %s (%s)",
+    "Закрываю: %s": "Closing: %s",
+    "Показываю окно: %s%s": "Showing window: %s%s",
+    "Сворачиваю окно: %s": "Minimizing window: %s",
+    "Показываю окно: %s": "Showing window: %s",
+    "[не Windows] startfile %s": "[not Windows] startfile %s",
+    "Store-пакет не найден: %s": "Store package not found: %s",
+    "Store-лого не найдено: %s (%s)": "Store logo not found: %s (%s)",
+    "Найдено программ: %d": "Apps found: %d",
+    "[не Windows] запуск %s": "[not Windows] launch %s",
+    "Кэш иконок обновлён под %d px (старых файлов: %d)": "Icon cache updated for %d px (old files: %d)",
+    "Иконка не извлеклась для %s: %s": "Icon wasn't extracted for %s: %s",
+    "Пропускаю мёртвый ярлык «%s» → %s": "Skipping dead shortcut «%s» → %s",
+    "Store-пакетов найдено: %d": "Store packages found: %d",
+    "поиск программ: %s": "app search: %s",
+    "Кнопка «%s» → %s": "Button «%s» → %s",
+    "Ярлык «%s» указывает на несуществующий файл: %s": "Shortcut «%s» points to a missing file: %s",
+    "Steam не закрылся штатно": "Steam didn't close normally",
+    "Кнопка «%s»: ярлык мёртвый, ищу программу заново": "Button «%s»: dead shortcut, looking for the app again",
+    "Кнопка «%s»: программа не найдена — добавь её через «+» → «Выбрать .exe на ПК»": "Button «%s»: app not found — add it with «+» → «Pick an .exe on the PC»",
+    "Прямой запуск %s не удался (%s), пробую через ярлык": "Direct launch of %s failed (%s), trying via the shortcut",
+    "Иконки: тема %s, значков %d": "Icons: theme %s, icons %d",
+    "Иконка не нашлась для %s: %s": "Icon not found for %s: %s",
+    "Кнопка «%s»: %s больше нет — ищу программу заново": "Button «%s»: %s is gone — looking for the app again",
+    "Кнопка «%s»: программа не найдена — добавь её через «+» → «Выбрать программу на ПК»": "Button «%s»: app not found — add it with «+» → «Pick an app on the PC»",
+    "Нечем открыть %s: нет xdg-open": "Nothing to open %s with: no xdg-open",
+    "Микрофон: %s": "Microphone: %s",
+    "Устройство вывода по умолчанию: %s": "Default output device: %s",
+    "Звук недоступен — микшер отключён": "Sound unavailable — mixer disabled",
+    "Выход по умолчанию: %s": "Default output: %s",
+    "COM не инициализирован": "COM not initialized",
+    "Хоткей: %s": "Hotkey: %s",
+    "Текст: %d символов": "Text: %d characters",
+    "Текст: %d символов%s": "Text: %d characters%s",
+    "Блокировка ПК": "Lock PC",
+    "Блокировка ПК (%s)": "Lock PC (%s)",
+    "[не Windows] key %s %s": "[not Windows] key %s %s",
+    "[не Windows] текст %d символов": "[not Windows] text %d characters",
+    "Не перевёл %s: %s": "Didn't switch %s: %s",
+    "Виртуальная клавиатура для хоткеев готова": "Virtual keyboard for hotkeys ready",
+    "Скриншот: %s": "Screenshot: %s",
+    "Для лампы нужен pyserial — ставлю…": "The lamp needs pyserial — installing…",
+    "pyserial установлен": "pyserial installed",
+    "Лампа не найдена (проверено портов: %d%s)": "Lamp not found (ports checked: %d%s)",
+    "pip install pyserial не удался:\n%s": "pip install pyserial failed:\n%s",
+    "Лампа найдена: %s": "Lamp found: %s",
+    "Лампа: нет доступа к %s — пользователь не в группе dialout. Один раз: sudo ./system-setup.sh (или sudo usermod -aG dialout $USER), потом перезайди в систему": "Lamp: no access to %s — the user isn't in the dialout group. Once: sudo ./system-setup.sh (or sudo usermod -aG dialout $USER), then log in again",
+    "Лампа отключена (%s пропал)": "Lamp disconnected (%s gone)",
+    "Лампа: связь потеряна (%s)": "Lamp: connection lost (%s)",
+    "Лампа": "Lamp",
+    "Клиент %s: %s": "Client %s: %s",
+    "Ошибка страницы на телефоне %s: %s": "Page error on phone %s: %s",
+    "Плагины не остановились: %s": "Plugins didn't stop: %s",
+    "Плагин «%s» запущен": "Plugin «%s» started",
+    "Плагин «%s» остановлен": "Plugin «%s» stopped",
+    "Плагин «%s» изменился — перезагружаю": "Plugin «%s» changed — reloading",
+    "Плагин «%s» не загрузился: %s": "Plugin «%s» didn't load: %s",
+    "Плагин «%s» не запустился: %s": "Plugin «%s» didn't start: %s",
+    "Плагин «%s»: ошибка при остановке: %s": "Plugin «%s»: error while stopping: %s",
+    "Плагин «%s»: ui(): %s": "Plugin «%s»: ui(): %s",
+    "Плагин «%s»: action(%s): %s": "Plugin «%s»: action(%s): %s",
+    "Плагин «%s»: input: %s": "Plugin «%s»: input: %s",
+    "Плагин «%s»: %s без разрешения «%s»": "Plugin «%s»: %s without the «%s» permission",
+    "Плагин «%s»: устаревший api.%s": "Plugin «%s»: deprecated api.%s",
+    "Плагин «%s» просит новые разрешения: %s — жду согласия": "Plugin «%s» asks for new permissions: %s — waiting for consent",
+    "Плагин «%s»: API %s, дек умеет %s…%s — не запускаю": "Plugin «%s»: API %s, the deck supports %s…%s — not starting",
+    "Плагин «%s»: разрешения — %s": "Plugin «%s»: permissions — %s",
+    "Плагин «%s» падает (%d ошибок за минуту) — останавливаю: %s": "Plugin «%s» keeps crashing (%d errors in a minute) — stopping: %s",
+    "Плагин «%s» остановлен вручную": "Plugin «%s» stopped manually",
+    "Плагин «%s» перезапущен": "Plugin «%s» restarted",
+    "Плагин «%s»: ui() думал %.2f с — дек ждал": "Plugin «%s»: ui() took %.2f s — the deck waited",
+    "Сообщение «%s» обрабатывалось %.0f мс — дек ждал": "Message «%s» took %.0f ms — the deck waited",
+    "Отчёт для разработчика: %s": "Developer report: %s",
+    "Порт %s: %s": "Port %s: %s",
+    "Плата лампы перезагружается при открытии порта — держу порт открытым до %d с после последнего касания (лечится конденсатором 10 мкФ RESET–GND)": "The lamp board resets when the port opens — keeping the port open for %d s after the last touch (fixed by a 10 µF capacitor RESET–GND)",
+    "Медиа: %s": "Media: %s",
+    "MPRIS подключён (сеансовая шина D-Bus)": "MPRIS connected (D-Bus session bus)",
+    "Плеер в доке: %s": "Player in the dock: %s",
+    "Обложка: %d КБ для «%s»": "Cover: %d KB for «%s»",
+    "D-Bus недоступен (%s) — плеер в доке работать не будет": "D-Bus unavailable (%s) — the dock player won't work",
+    "Обложка не загрузилась для «%s»: %s": "Cover didn't load for «%s»: %s",
+    "Обложка не загрузилась для «%s»": "Cover didn't load for «%s»",
+    "медиа": "media",
+    "Плеер не дал сменить %s: %s": "The player didn't let us change %s: %s",
+    "SMTC подключён": "SMTC connected",
+    "WinRT недоступен (%s) — только медиаклавиши": "WinRT unavailable (%s) — media keys only",
+    "Видеокарта AMD: %s": "AMD graphics card: %s",
+    "LibreHardwareMonitor на связи — температуры есть": "LibreHardwareMonitor online — temperatures available",
+    "LibreHardwareMonitor не отвечает на %s (%s) — температур не будет, проверю ещё раз через %d с": "LibreHardwareMonitor doesn't answer on %s (%s) — no temperatures, will check again in %d s",
+    "Саундпад: создан служебный выход %s": "Soundpad: created service output %s",
+    "Саундпад: создан виртуальный микрофон «%s» — выбери его в Discord": "Soundpad: created virtual microphone «%s» — pick it in Discord",
+    "Саундпад: выход оборвался (%s)": "Soundpad: output dropped (%s)",
+    "Саундпад: микрофон оборвался (%s)": "Soundpad: microphone dropped (%s)",
+    "Саундпад: список устройств — %s": "Soundpad: device list — %s",
+    "Саундпад: колбэк выхода": "Soundpad: output callback",
+    "Саундпад: колбэк микрофона": "Soundpad: microphone callback",
+    "Для саундпада ставлю: %s": "Installing for the soundpad: %s",
+    "Библиотеки звука установлены": "Sound libraries installed",
+    "Саундпад: %s": "Soundpad: %s",
+    "pip install не удался:\n%s": "pip install failed:\n%s",
+    "Саундпад: %s → %s": "Soundpad: %s → %s",
+    "Саундпад: голос ← %s": "Soundpad: voice ← %s",
+    "Саундпад: поток «в эфир» остановился — переоткрываю": "Soundpad: the «on air» stream stopped — reopening",
+    "Саундпад: микрофон отвалился — переоткрываю": "Soundpad: the microphone dropped — reopening",
+    "Папка звуков: %s": "Sounds folder: %s",
+    "Список устройств: %s": "Device list: %s",
+    "Саундпад: %s → %s (%d Гц)": "Soundpad: %s → %s (%d Hz)",
+    "Саундпад: голос ← %s (%d Гц)": "Soundpad: voice ← %s (%d Hz)",
+    "Саундпад": "Soundpad",
+    "Не читается %s: %s": "Can't read %s: %s",
+    "Саундпад: виртуальный микрофон — %s": "Soundpad: virtual microphone — %s",
+    "Не раскодировался звук: %s": "Sound didn't decode: %s",
+    "Создаю стандартный конфиг": "Creating the default config",
+    "Конфиг загружен: %s": "Config loaded: %s",
+    "Конфиг повреждён, беру стандартный (старый сохранён как .bak)": "Config damaged, taking the default (the old one saved as .bak)",
+    "Автозапуск при входе в систему: %s": "Autostart at login: %s",
+    "Автозапуск с Windows: %s": "Autostart with Windows: %s",
+    "иконка": "icon",
+    "Значок в трее: панель перезапустилась — зарегистрировался заново": "Tray icon: the panel restarted — registered again",
+    "меню трея": "tray menu",
+    "Значок в трее недоступен: нет сеансовой шины D-Bus (%s)": "Tray icon unavailable: no D-Bus session bus (%s)",
+    "Значок в трее недоступен (%s): в GNOME нужно расширение AppIndicator. Остановить сервер: ./stop.sh": "Tray icon unavailable (%s): GNOME needs the AppIndicator extension. Stop the server: ./stop.sh",
+    "Значок в трее: %s": "Tray icon: %s",
+    "Уведомление: %s": "Notification: %s",
+    "Перезапуск из трея": "Restart from the tray",
+    "Выход из трея": "Exit from the tray",
+    "Обновление из трея": "Update from the tray",
+    "Обновление из файла (трей)": "Update from file (tray)",
+    "Ярлык в меню приложений: %s": "Shortcut in the app menu: %s",
+    "Ярлыки под прежним названием: %s": "Shortcuts under the old name: %s",
+    "Значок в трее недоступен (%s). Остановить сервер: stop.bat": "Tray icon unavailable (%s). Stop the server: stop.bat",
+    "трей": "tray",
+    "Не открылось: %s": "Didn't open: %s",
+    "Трей / ярлык на новом языке: %s": "Tray / shortcut in the new language: %s",
+    "автозапуск": "autostart",
+    "уведомление трея": "tray notification",
+    "Обновление до %s «%s»%s": "Update to %s «%s»%s",
+    "Токен GitHub для обновлений: %s": "GitHub token for updates: %s",
+    "Обновление: %s": "Update: %s",
+    "Обновления: %s": "Updates: %s",
+    "Обновления": "Updates",
+    "Обновление не готово: %s": "Update not ready: %s",
+    "Обновление": "Update",
+    "Выбор архива обновления": "Choosing the update archive",
+    "vintage: порт %s занят: %s": "vintage: port %s busy: %s",
+    "vintage: игра на связи": "vintage: game online",
 }

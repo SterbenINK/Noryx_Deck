@@ -54,7 +54,7 @@ def is_autorun():
 def comment():
     """Описание дека в меню приложений и автозапуске — на языке дека (без Comment[..]: те берутся по языку
     системы, а не по настройке дека)."""
-    return i18n.tr("Стрим-дек на телефоне — сервер на ПК", "Стрім-дек на телефоні — сервер на ПК")
+    return i18n.tr("Phone stream deck — the PC server", "Стрім-дек на телефоні — сервер на ПК")
 
 
 def menu_entry(create=False):
@@ -62,7 +62,7 @@ def menu_entry(create=False):
     и смене языка (если пользователь его не удалял)."""
     migrate_old_name()
     text = ("[Desktop Entry]\nType=Application\nName=Noryx\n"
-            f"Comment={comment()}\nGenericName={i18n.tr('Стрим-дек', 'Стрім-дек')}\n"
+            f"Comment={comment()}\nGenericName={i18n.tr('Stream deck', 'Стрім-дек')}\n"
             f"Exec={_q(ROOT / 'start.sh')}\nIcon={ICON_FILE}\nTerminal=false\nCategories=Utility;\n"
             "Keywords=deck;stream;phone;\n")
     try:
@@ -91,7 +91,7 @@ def set_autorun(on):
                 f.unlink()
             except FileNotFoundError:
                 pass
-    log.info("Автозапуск при входе в систему: %s", i18n.tr("включён", "увімкнено") if on else i18n.tr("выключен", "вимкнено"))
+    log.info("Автозапуск при входе в систему: %s", i18n.tr("on", "увімкнено") if on else i18n.tr("off", "вимкнено"))
 
 
 def spawn_restart():
@@ -142,11 +142,9 @@ class Tray:
         self._ready = threading.Event()
         self._ok = False
 
-    def tr(self, ru, uk):
-        try:
-            return uk if self.uk() else ru
-        except Exception:
-            return ru
+    def tr(self, en, uk, *args):
+        import i18n
+        return i18n.tr(en, uk, *args)
 
     def lang_changed(self):
         """Язык сменили в настройках дека — панель перечитает меню и подсказку."""
@@ -155,7 +153,7 @@ class Tray:
                 self.menu.changed()
             if self.sni:
                 self.sni.NewToolTip()
-        if self.loop:
+        if self.loop and not self.loop.is_closed():       # без D-Bus поток трея уже закончился
             self.loop.call_soon_threadsafe(emit)
 
     def refresh(self):
@@ -205,18 +203,18 @@ class Tray:
             log.exception("пункт обновления в меню трея")      # меню остаётся, просто без этого пункта
             upd = None
         return [
-            (1, {"label": self.tr("Открыть дек", "Відкрити дек")}),
-            (2, {"label": self.tr("С телефона: ", "З телефона: ") + self.url_phone, "enabled": False}),
+            (1, {"label": self.tr("Open the deck", "Відкрити дек")}),
+            (2, {"label": self.tr("From the phone: ", "З телефона: ") + self.url_phone, "enabled": False}),
             (3, {"type": "separator"}),
-            *([(10, {"label": upd}), (11, {"label": self.tr("Обновить из файла…", "Оновити з файлу…")}),
+            *([(10, {"label": upd}), (11, {"label": self.tr("Update from file…", "Оновити з файлу…")}),
                (12, {"type": "separator"})] if upd else []),
-            (4, {"label": self.tr("Запускать при входе в систему", "Запускати під час входу в систему"),
+            (4, {"label": self.tr("Start at login", "Запускати під час входу в систему"),
                  "toggle-type": "checkmark", "toggle-state": 1 if is_autorun() else 0}),
-            (5, {"label": self.tr("Открыть лог", "Відкрити лог")}),
-            (6, {"label": self.tr("Открыть папку дека", "Відкрити папку дека")}),
+            (5, {"label": self.tr("Open log", "Відкрити лог")}),
+            (6, {"label": self.tr("Open deck folder", "Відкрити папку дека")}),
             (7, {"type": "separator"}),
-            (8, {"label": self.tr("Перезапустить", "Перезапустити")}),
-            (9, {"label": self.tr("Выход", "Вихід")}),
+            (8, {"label": self.tr("Restart", "Перезапустити")}),
+            (9, {"label": self.tr("Quit", "Вихід")}),
         ]
 
     # ---------- жизнь значка ----------
@@ -275,7 +273,7 @@ class Tray:
         bus.add_message_handler(on_msg)
         self._ready.set()
         if self._ok and self.greet:
-            await self._notify(bus, self.tr("Сервер работает", "Сервер працює"))
+            await self._notify(bus, self.tr("Server is running", "Сервер працює"))
         await self.done.wait()
         bus.disconnect()
 
@@ -353,7 +351,7 @@ def _interfaces():
 
         @dbus_property(access=PropertyAccess.READ)
         def ToolTip(self) -> "(sa(iiay)ss)":
-            return ["", [], "Noryx", self.tray.tr("С телефона: ", "З телефона: ") + self.tray.url_phone]
+            return ["", [], "Noryx", self.tray.tr("From the phone: ", "З телефона: ") + self.tray.url_phone]
 
         @dbus_property(access=PropertyAccess.READ)
         def ItemIsMenu(self) -> "b":

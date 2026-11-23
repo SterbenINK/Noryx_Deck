@@ -14,17 +14,22 @@ import threading
 import time
 import urllib.request
 
-NAME = {"ru": "Satisfactory", "uk": "Satisfactory"}
-ABOUT = {"ru": "Статистика завода: электричество, батареи, производство, AWESOME Sink — графики. Нужен мод игры Ficsit Remote Monitoring",
+NAME = {"en": "Satisfactory", "uk": "Satisfactory"}
+ABOUT = {"en": "Factory stats: electricity, batteries, production, AWESOME Sink — charts. Needs the "
+               "Ficsit Remote Monitoring game mod",
          "uk": "Статистика заводу: електрика, батареї, виробництво, AWESOME Sink — графіки. Потрібен мод гри Ficsit Remote Monitoring"}
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = ["network", "files"]           # files — читать токен из конфига мода FRM в папке игры
-VERSION = "1.1.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
-CHANGES = [("1.1.0", "Токен FRM (API Authentication Token): поле в настройках, сам читает из конфига мода; свой адрес не отвечает — "
-            "ищет FRM на других портах; причина «нет связи» — в логе дека",
+VERSION = "1.2.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
+CHANGES = [("1.2.0", "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+            "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"),
+           ("1.1.0", "FRM token (API Authentication Token): a field in settings, read from the mod config "
+                     "automatically; if its own address doesn't answer — looks for FRM on other ports; the «no"
+                     " connection» reason — in the deck log",
             "Токен FRM (API Authentication Token): поле в налаштуваннях, сам читає з конфігу мода; своя адреса не відповідає — "
             "шукає FRM на інших портах; причина «немає зв'язку» — у лозі дека"),
-           ("1.0.0", "Первая версия в каталоге: данные из Ficsit Remote Monitoring",
+           ("1.0.0", "First version in the catalog: data from Ficsit Remote Monitoring",
             "Перша версія в каталозі: дані з Ficsit Remote Monitoring")]
 DEFAULT_ON = False
 
@@ -41,10 +46,10 @@ PORTS = list(range(8080, 8090))     # где искать FRM, если свой
 THEME = {"bg": "#16181C", "panel": "#23262C", "border": "#0C0D10", "text": "#EDEFF2", "muted": "#9AA1AB",
          "accent": "#FA9549", "radius": 6}
 
-RANGES = [("m1", 12, ("1 мин", "1 хв"), (("-1 мин", "-1 хв"), ("-30 с", "-30 с"))),
-          ("m10", 60, ("10 мин", "10 хв"), (("-10 мин", "-10 хв"), ("-5 мин", "-5 хв"))),
-          ("h1", 60, ("1 ч", "1 год"), (("-1 ч", "-1 год"), ("-30 мин", "-30 хв"))),
-          ("h10", 60, ("10 ч", "10 год"), (("-10 ч", "-10 год"), ("-5 ч", "-5 год")))]
+RANGES = [("m1", 12, ("1 min", "1 хв"), (("-1 min", "-1 хв"), ("-30 s", "-30 с"))),
+          ("m10", 60, ("10 min", "10 хв"), (("-10 min", "-10 хв"), ("-5 min", "-5 хв"))),
+          ("h1", 60, ("1 h", "1 год"), (("-1 h", "-1 год"), ("-30 min", "-30 хв"))),
+          ("h10", 60, ("10 h", "10 год"), (("-10 h", "-10 год"), ("-5 h", "-5 год")))]
 
 # показатели: pp выработка, pc потребление, cap мощность (Вт); bat заряд (%), bi / bo в батареи / из батарей (Вт);
 # im / iu предметы сделано / потрачено (шт/мин, без жидкостей), eff загрузка заводов (%); sp очки Sink в минуту
@@ -52,18 +57,18 @@ METRICS = ["pp", "pc", "cap", "bat", "bi", "bo", "im", "iu", "eff", "sp"]
 
 # вкладка: (название ru/uk, значок, цвет, главный показатель, единица, si, линии графика, топ)
 TABS = {
-    "power": (("Электричество", "Електрика"), "⚡", "#F2C94C", "pc", "W", True,
-              [("pp", ("Выработка", "Вироблено"), "#3DDC6A", True), ("pc", ("Потребление", "Спожито"), "#FA9549", False),
-               ("cap", ("Мощность", "Потужність"), "#6B7280", False)],
-              ("pw", ("Больше всех потребляют", "Найбільше споживають"))),
-    "battery": (("Батареи", "Батареї"), "🔋", "#4FC3F7", "bat", "%", False,
-                [("bat", ("Заряд", "Заряд"), "#4FC3F7", True)],
+    "power": (("Electricity", "Електрика"), "⚡", "#F2C94C", "pc", "W", True,
+              [("pp", ("Generation", "Вироблено"), "#3DDC6A", True), ("pc", ("Consumption", "Спожито"), "#FA9549", False),
+               ("cap", ("Power", "Потужність"), "#6B7280", False)],
+              ("pw", ("Top consumers", "Найбільше споживають"))),
+    "battery": (("Batteries", "Батареї"), "🔋", "#4FC3F7", "bat", "%", False,
+                [("bat", ("Charge", "Заряд"), "#4FC3F7", True)],
                 None),
-    "items": (("Производство", "Виробництво"), "⚙", "#FA9549", "im", "/мин", True,
-              [("im", ("Сделано", "Зроблено"), "#FA9549", True), ("iu", ("Потрачено", "Витрачено"), "#7FB2D9", False)],
-              ("im", ("Больше всего делается", "Найбільше робиться"))),
-    "sink": (("AWESOME Sink", "AWESOME Sink"), "◎", "#B57BFF", "sp", "/мин", True,
-             [("sp", ("Очки", "Очки"), "#B57BFF", True)],
+    "items": (("Production", "Виробництво"), "⚙", "#FA9549", "im", "/min", True,
+              [("im", ("Made", "Зроблено"), "#FA9549", True), ("iu", ("Spent", "Витрачено"), "#7FB2D9", False)],
+              ("im", ("Made the most", "Найбільше робиться"))),
+    "sink": (("AWESOME Sink", "AWESOME Sink"), "◎", "#B57BFF", "sp", "/min", True,
+             [("sp", ("Points", "Очки"), "#B57BFF", True)],
              None),
 }
 ORDER = ["power", "battery", "items", "sink"]
@@ -352,15 +357,9 @@ class Plugin:
         tr, b = self.api.tr, self.base()
         code = getattr(e, "code", None)
         if code in (401, 403):
-            return tr(f"{b}: FRM просит токен (HTTP {code}). Скопируй «API Authentication Token» из настроек мода "
-                      "Ficsit Remote Monitoring в поле «Токен» ниже.",
-                      f"{b}: FRM просить токен (HTTP {code}). Скопіюй «API Authentication Token» з налаштувань мода "
-                      "Ficsit Remote Monitoring у поле «Токен» нижче.")
+            return tr("{0}: FRM asks for a token (HTTP {1}). Copy the «API Authentication Token» from the Ficsit Remote Monitoring mod settings into the «Token» field below.", "{0}: FRM просить токен (HTTP {1}). Скопіюй «API Authentication Token» з налаштувань мода Ficsit Remote Monitoring у поле «Токен» нижче.", b, code)
         if isinstance(code, int) or isinstance(e, ValueError):
-            return tr(f"На {b} отвечает не Ficsit Remote Monitoring (HTTP {code or '?'}) — порт занят другой программой "
-                      "(часто — отладка Steam). Поставь в настройках мода FRM другой порт (например 8081).",
-                      f"На {b} відповідає не Ficsit Remote Monitoring (HTTP {code or '?'}) — порт зайняла інша програма "
-                      "(часто — налагодження Steam). Постав у налаштуваннях мода FRM інший порт (наприклад 8081).")
+            return tr("Something other than Ficsit Remote Monitoring answers on {0} (HTTP {1}) — the port is taken by another program (often Steam debugging). Set another port in the FRM mod settings (e.g. 8081).", "На {0} відповідає не Ficsit Remote Monitoring (HTTP {1}) — порт зайняла інша програма (часто — налагодження Steam). Постав у налаштуваннях мода FRM інший порт (наприклад 8081).", b, code or '?')
         return f"{b}: " + str(getattr(e, "reason", "") or e)[:160]
 
     def loop(self):
@@ -493,7 +492,7 @@ class Plugin:
         self.api.update()
 
     def unit(self, u):
-        return self.api.tr(u, u.replace("/мин", "/хв"))
+        return self.api.tr(u, u.replace("/min", "/хв"))
 
     def fmt(self, key, unit, use_si=True):
         v = self.now.get(key)
@@ -504,21 +503,21 @@ class Plugin:
     def why(self):
         tr = self.api.tr
         if not self.now:
-            return tr("Нет данных от игры: запусти Satisfactory с модом Ficsit Remote Monitoring и его веб-сервером "
-                      "(в чате игры: /frm http start).",
+            return tr("No data from the game: start Satisfactory with the Ficsit Remote Monitoring mod and its "
+                      "web server (in the game chat: /frm http start).",
                       "Немає даних від гри: запусти Satisfactory з модом Ficsit Remote Monitoring і його веб-сервером "
                       "(у чаті гри: /frm http start).")
-        return tr("Игра закрыта — показываю последние данные.", "Гра закрита — показую останні дані.")
+        return tr("The game is closed — showing the last data.", "Гра закрита — показую останні дані.")
 
     def notes(self, live):
         tr, out = self.api.tr, []
         if not live:
             out.append({"type": "label", "style": "line", "color": "#9AA1AB", "label": self.why()})
         elif self.paused:
-            out.append({"type": "label", "style": "line", "color": "#9AA1AB", "label": tr("Игра на паузе.", "Гра на паузі.")})
+            out.append({"type": "label", "style": "line", "color": "#9AA1AB", "label": tr("The game is paused.", "Гра на паузі.")})
         if live and self.fuse:
             out.append({"type": "label", "style": "line", "color": "#E5484D",
-                        "label": tr("⚠ Выбило предохранитель!", "⚠ Вибило запобіжник!")})
+                        "label": tr("⚠ The fuse blew!", "⚠ Вибило запобіжник!")})
         return out
 
     def ui(self):
@@ -527,31 +526,32 @@ class Plugin:
         return {
             "theme": THEME,
             "mode": {"name": "Satisfactory", "icon": "gauge", "color": "#FA9549",
-                     "sub": {"ru": f"Завод: {self.session}" if live and self.session else ("Завод" if live else "Нет данных от игры"),
+                     "sub": {"en": f"Factory: {self.session}" if live and self.session else ("Factory" if live else "No data from the game"),
                              "uk": f"Завод: {self.session}" if live and self.session else ("Завод" if live else "Немає даних від гри")}},
             "dock": [{"type": "card", "go": "mode", "title": "Satisfactory", "icon": "⚙", "items": note + [
                 {"type": "text", "label": "⚡", "value": f'{self.fmt("pc", "W")} / {self.fmt("cap", "W")}'},
-                {"type": "text", "label": "⚙", "value": self.fmt("im", "/мин")},
-                {"type": "text", "label": "◎", "value": self.fmt("sp", "/мин")}]}],
+                {"type": "text", "label": "⚙", "value": self.fmt("im", "/min")},
+                {"type": "text", "label": "◎", "value": self.fmt("sp", "/min")}]}],
             "screen": [{"type": "grid", "widths": [1, 3.6], "fill": True, "items": [
                 {"type": "grid", "cols": 1, "items": self.tabs()},
                 {"type": "card", "scroll": True, "items": note + self.page()}]}],
             "settings": [
                 {"type": "text", "label": "Ficsit Remote Monitoring",
-                 "value": tr("на связи", "на зв'язку") if live else tr("нет связи", "немає зв'язку")},
-                {"type": "text", "label": tr("Адрес", "Адреса"), "value": self.base()},
+                 "value": tr("online", "на зв'язку") if live else tr("no connection", "немає зв'язку")},
+                {"type": "text", "label": tr("Address", "Адреса"), "value": self.base()},
                 *([{"type": "label", "style": "line", "color": "#E07A4F", "label": self.err[:300]}] if self.err else []),
                 {"type": "label", "style": "line", "label": tr(
-                    "Мод Ficsit Remote Monitoring — через Satisfactory Mod Manager. В игре: /frm http start (или "
-                    "автозапуск веб-сервера в настройках мода). Другой ПК — ниже (пусто — сам ищет на 127.0.0.1:8080…8089).",
+                    "Ficsit Remote Monitoring mod — via Satisfactory Mod Manager. In the game: /frm http "
+                    "start (or web server autostart in the mod settings). Another PC — below (empty — "
+                    "searches 127.0.0.1:8080…8089 itself).",
                     "Мод Ficsit Remote Monitoring — через Satisfactory Mod Manager. У грі: /frm http start (або "
                     "автозапуск веб-сервера в налаштуваннях мода). Інший ПК — нижче (порожньо — сам шукає на 127.0.0.1:8080…8089).")},
-                {"type": "input", "id": "addr", "placeholder": self.api.cfg.get("addr") or tr("сам: ", "сам: ") + self.base().split("//")[-1],
-                 "button": tr("Сохранить", "Зберегти")},
-                {"type": "input", "id": "token", "label": tr("Токен", "Токен"),
-                 "placeholder": tr("задан", "задано") if (self.api.cfg.get("token") or "").strip() else
-                 tr("из конфига мода", "з конфігу мода") if self.auto_token else "API Authentication Token",
-                 "button": tr("Сохранить", "Зберегти")}],
+                {"type": "input", "id": "addr", "placeholder": self.api.cfg.get("addr") or tr("auto: ", "сам: ") + self.base().split("//")[-1],
+                 "button": tr("Save", "Зберегти")},
+                {"type": "input", "id": "token", "label": tr("Token", "Токен"),
+                 "placeholder": tr("set", "задано") if (self.api.cfg.get("token") or "").strip() else
+                 tr("from the mod config", "з конфігу мода") if self.auto_token else "API Authentication Token",
+                 "button": tr("Save", "Зберегти")}],
         }
 
     def tabs(self):
@@ -560,16 +560,16 @@ class Plugin:
             (ru, uk), icon, col, key, unit, use_si, _lines, _top = TABS[k]
             sub, val = "", self.fmt(key, unit, use_si)
             if k == "power":
-                sub = tr("выработка ", "вироблено ") + self.fmt("pp", "W")
+                sub = tr("generation ", "вироблено ") + self.fmt("pp", "W")
             elif k == "battery":
                 sub = (f'↓{self.fmt("bi", "W")}  ↑{self.fmt("bo", "W")}' if self.batcap > 0
-                       else tr("батарей нет", "батарей немає"))
+                       else tr("no batteries", "батарей немає"))
                 if self.batcap <= 0:
                     val = "—"
             elif k == "items":
-                sub = tr("загрузка ", "завантаження ") + self.fmt("eff", "%", False)
+                sub = tr("load ", "завантаження ") + self.fmt("eff", "%", False)
             elif k == "sink":
-                sub = tr("купонов ", "купонів ") + str(self.sinkv["coupons"]) if self.sinkv else ""
+                sub = tr("coupons ", "купонів ") + str(self.sinkv["coupons"]) if self.sinkv else ""
             out.append({"type": "stat", "id": "tab:" + k, "on": self.tab == k, "icon": icon, "color": col,
                         "label": tr(ru, uk), "value": val, "sub": sub})
         return out
@@ -582,7 +582,7 @@ class Plugin:
         tr = self.api.tr
         (ru, uk), icon, col, key, unit, use_si, lines, top = TABS[self.tab]
         rng = next(r for r in RANGES if r[0] == self.range)
-        n, xs = rng[1], [tr(*rng[3][0]), tr(*rng[3][1]), tr("сейчас", "зараз")]
+        n, xs = rng[1], [tr(*rng[3][0]), tr(*rng[3][1]), tr("now", "зараз")]
         head = [{"type": "row", "items": [{"type": "button", "id": "range:" + r[0], "label": tr(*r[2]), "on": r[0] == self.range}
                                           for r in RANGES]}]
         chart = {"type": "chart", "label": f"{icon} {tr(ru, uk)}", "sub": self.session,
@@ -594,25 +594,25 @@ class Plugin:
         if self.tab == "power":
             used = self.now.get("pc") or 0
             cap = self.now.get("cap") or 0
-            body.append({"type": "bar", "label": tr("Нагрузка сети", "Навантаження мережі"), "value": used, "max": cap or 1,
+            body.append({"type": "bar", "label": tr("Grid load", "Навантаження мережі"), "value": used, "max": cap or 1,
                          "color": "#E5484D" if cap and used / cap > 0.9 else "#F2C94C", "size": 10,
                          "text": f"{used / cap * 100:.0f}%" if cap else "—"})
         if self.tab == "battery":
             body.append({"type": "grid", "cols": 3, "items": [
-                {"type": "stat", "icon": "↓", "label": tr("Заряжаются", "Заряджаються"), "value": self.fmt("bi", "W"), "color": "#3DDC6A"},
-                {"type": "stat", "icon": "↑", "label": tr("Отдают", "Віддають"), "value": self.fmt("bo", "W"), "color": "#FA9549"},
-                {"type": "stat", "icon": "🔋", "label": tr("Ёмкость", "Ємність"),
+                {"type": "stat", "icon": "↓", "label": tr("Charging", "Заряджаються"), "value": self.fmt("bi", "W"), "color": "#3DDC6A"},
+                {"type": "stat", "icon": "↑", "label": tr("Discharging", "Віддають"), "value": self.fmt("bo", "W"), "color": "#FA9549"},
+                {"type": "stat", "icon": "🔋", "label": tr("Capacity", "Ємність"),
                  "value": si(self.batcap * 1e6, "Wh") if self.batcap > 0 else "—"}]})
         if self.tab == "items":
-            body.append({"type": "bar", "label": tr("Загрузка заводов", "Завантаження заводів"), "value": self.now.get("eff") or 0,
+            body.append({"type": "bar", "label": tr("Factory load", "Завантаження заводів"), "value": self.now.get("eff") or 0,
                          "max": 100, "color": "#FA9549", "size": 10, "text": self.fmt("eff", "%", False)})
         if self.tab == "sink" and self.sinkv:
             s = self.sinkv
-            body.append({"type": "bar", "label": tr("До купона", "До купона") + f' ({si(s["next"])})', "value": s["pct"],
+            body.append({"type": "bar", "label": tr("Next coupon", "До купона") + f' ({si(s["next"])})', "value": s["pct"],
                          "max": 100, "color": "#B57BFF", "size": 10, "text": f'{s["pct"]:.0f}%'})
             body.append({"type": "grid", "cols": 2, "items": [
-                {"type": "stat", "icon": "🎟", "label": tr("Купонов", "Купонів"), "value": str(s["coupons"]), "color": "#B57BFF"},
-                {"type": "stat", "icon": "◎", "label": tr("Всего очков", "Усього очок"), "value": si(s["total"])}]})
+                {"type": "stat", "icon": "🎟", "label": tr("Coupons", "Купонів"), "value": str(s["coupons"]), "color": "#B57BFF"},
+                {"type": "stat", "icon": "◎", "label": tr("Total points", "Усього очок"), "value": si(s["total"])}]})
         if top:
             rows = [r for r in lst(self.top.get(top[0])) if isinstance(r, list) and len(r) >= 2 and isinstance(r[1], (int, float))]
             if rows:
@@ -620,6 +620,6 @@ class Plugin:
                 body.append({"type": "label", "label": tr(*top[1])})
                 for r in rows:
                     u = ("W" if top[0] == "pw" else
-                         tr("м³/мин", "м³/хв") if len(r) > 2 and r[2] else self.unit("/мин"))
+                         tr("m³/min", "м³/хв") if len(r) > 2 and r[2] else self.unit("/min"))
                     body.append({"type": "bar", "label": r[0], "value": r[1], "max": mx, "color": col, "size": 8, "text": si(r[1], u)})
         return body

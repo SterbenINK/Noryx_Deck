@@ -1,4 +1,5 @@
 """Хранение конфигурации дека: режимы, раскладки кнопок, настройки."""
+import i18n
 import copy
 import json
 import logging
@@ -13,10 +14,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 CONFIG = DATA / "config.json"
 
-MODES = {
-    "hobby": {"name": "Хобби", "uk": "Хобі", "icon": "chip"},
-    "normal": {"name": "Обычный", "uk": "Звичайний", "icon": "monitor"},
-    "hotkeys": {"name": "Хоткеи", "uk": "Хоткеї", "icon": "keys"},
+MODES = {      # ru — только чтобы старые сценарии («режим Обычный») находили режим
+    "hobby": {"name": "Hobby", "uk": "Хобі", "ru": "Хобби", "icon": "chip"},
+    "normal": {"name": "Normal", "uk": "Звичайний", "ru": "Обычный", "icon": "monitor"},
+    "hotkeys": {"name": "Hotkeys", "uk": "Хоткеї", "ru": "Хоткеи", "icon": "keys"},
 }
 ORDER = ["hobby", "normal", "hotkeys"]
 HK = "hotkeys"
@@ -47,10 +48,10 @@ def hotkey(label, keys):
 
 
 HOTKEYS = [
-    hotkey("Копировать", "ctrl+c"), hotkey("Вставить", "ctrl+v"), hotkey("Вырезать", "ctrl+x"),
-    hotkey("Отменить", "ctrl+z"), hotkey("Повторить", "ctrl+shift+z"), hotkey("Сохранить", "ctrl+s"),
-    hotkey("Выделить всё", "ctrl+a"), hotkey("Найти", "ctrl+f"), hotkey("Новая вкладка", "ctrl+t"),
-    hotkey("Закрыть вкладку", "ctrl+w"), hotkey("Сменить окно", "alt+tab"), hotkey("Обновить", "f5"),
+    hotkey("Copy", "ctrl+c"), hotkey("Paste", "ctrl+v"), hotkey("Cut", "ctrl+x"),
+    hotkey("Undo", "ctrl+z"), hotkey("Redo", "ctrl+shift+z"), hotkey("Save", "ctrl+s"),
+    hotkey("Select all", "ctrl+a"), hotkey("Find", "ctrl+f"), hotkey("New tab", "ctrl+t"),
+    hotkey("Close tab", "ctrl+w"), hotkey("Switch window", "alt+tab"), hotkey("Refresh", "f5"),
 ]
 
 
@@ -71,7 +72,7 @@ DEFAULT = {
         "spot": True,
         "player": "auto",     # плеер в доке: spotify / ytmusic / auto (что играет)
         "toasts": True,
-        "lang": "ru",        # язык интерфейса: ru / uk
+        "lang": "en",        # язык интерфейса: en / uk / код пакета из каталога (i18n.NAMES)
         "clock": False,      # часы с датой в доке
         "autoMode": False,   # автопереключение режимов по правилам autoRules
         "autoRules": [],     # [{kind: app|out|time, value, label, mode, back}] — программа запустилась / выход звука / время
@@ -110,21 +111,21 @@ DEFAULT = {
             app("Arduino IDE", "Arduino IDE", auto=True, mono="Ar"),
             app("HiView", "HiView", auto=True, mono="Hv"),
             app("VS Code", "Visual Studio Code", mono="VS"),
-            app("Проводник", path="explorer.exe", mono="Пр"),
-            app("Калькулятор", path="calc.exe", mono="="),
-            macro("Скриншот", "screenshot", mono="Sc"),
-            macro("Блок ПК", "lock", mono="Lk"),
+            app("Explorer", path="explorer.exe", mono="Ex"),
+            app("Calculator", path="calc.exe", mono="="),
+            macro("Screenshot", "screenshot", mono="Sc"),
+            macro("Lock PC", "lock", mono="Lk"),
         ],
         "normal": [
             app("Discord", "Discord", auto=True, mono="Dc"),
             app("Steam", "Steam", auto=True, mono="St"),
             app("Telegram", "Telegram", auto=True, mono="Tg"),
-            toggle("Микрофон", "mic", mono="Mic"),
+            toggle("Microphone", "mic", mono="Mic"),
             app("Spotify", "Spotify", mono="Sp"),
             app("Prism Launcher", "Prism Launcher", mono="Mc"),
-            toggle("Оверлей FPS", "hotkey", keys="ctrl+shift+o", mono="FPS"),
-            macro("Скриншот", "screenshot", mono="Sc"),
-            macro("Блок ПК", "lock", mono="Lk"),
+            toggle("FPS overlay", "hotkey", keys="ctrl+shift+o", mono="FPS"),
+            macro("Screenshot", "screenshot", mono="Sc"),
+            macro("Lock PC", "lock", mono="Lk"),
         ],
         "hotkeys": HOTKEYS,
     },
@@ -137,21 +138,21 @@ LINUX_LAYOUTS = {
     "hobby": [
         app("Arduino IDE", "Arduino IDE", auto=True, mono="Ar"),
         app("VS Code", "Visual Studio Code|VSCodium|Code - OSS", mono="VS"),
-        app("Файлы", path="~", mono="Фл"),
-        app("Калькулятор", "KCalc|Qalculate|Calculator|Калькулятор", mono="="),
-        macro("Скриншот", "screenshot", mono="Sc"),
-        macro("Блок ПК", "lock", mono="Lk"),
+        app("Files", path="~", mono="Fi"),
+        app("Calculator", "KCalc|Qalculate|Calculator|Калькулятор", mono="="),
+        macro("Screenshot", "screenshot", mono="Sc"),
+        macro("Lock PC", "lock", mono="Lk"),
     ],
     "normal": [
         app("Discord", "Discord|Vesktop|WebCord", auto=True, mono="Dc"),
         app("Steam", "Steam", auto=True, mono="St"),
         app("Telegram", "Telegram", auto=True, mono="Tg"),
-        toggle("Микрофон", "mic", mono="Mic"),
+        toggle("Microphone", "mic", mono="Mic"),
         app("Spotify", "Spotify", mono="Sp"),
         app("Prism Launcher", "Prism Launcher", mono="Mc"),
-        toggle("Оверлей FPS", "hotkey", keys="rshift+f12", mono="FPS"),
-        macro("Скриншот", "screenshot", mono="Sc"),
-        macro("Блок ПК", "lock", mono="Lk"),
+        toggle("FPS overlay", "hotkey", keys="rshift+f12", mono="FPS"),
+        macro("Screenshot", "screenshot", mono="Sc"),
+        macro("Lock PC", "lock", mono="Lk"),
     ],
     "hotkeys": HOTKEYS,
 }
@@ -188,6 +189,8 @@ class Store:
         # недостающие ключи из стандартного
         for k, v in DEFAULT["cfg"].items():
             self.data.setdefault("cfg", {}).setdefault(k, copy.deepcopy(v))     # копия: списки не делим со стандартом
+        if self.data["cfg"].get("lang") == "ru":      # русского больше нет — кто был на нём, переходит на украинский
+            self.data["cfg"]["lang"] = "uk"
         for m in ORDER:
             self.data.setdefault("layouts", {}).setdefault(m, copy.deepcopy(DEFAULT["layouts"][m]))
         # свои названия и значки режимов: {id: {name, icon}}; свои режимы — там же с "user": True
@@ -250,8 +253,9 @@ class Store:
         if name:
             return name
         if self.is_plugin(m):
-            return self.plugin_modes[m]["uk" if uk else "ru"]
-        return MODES[m]["uk" if uk else "name"] if m in MODES else str(m)
+            pm = self.plugin_modes[m]
+            return i18n.tr(pm.get("en") or pm.get("ru") or m, pm.get("uk") or pm.get("en") or m)
+        return i18n.tr(MODES[m]["name"], MODES[m]["uk"]) if m in MODES else str(m)
 
     def set_mode_meta(self, m, name, icon):
         meta = self.data["modes"].setdefault(m, {})
@@ -322,7 +326,8 @@ class Store:
             elif self.is_plugin(m):
                 pm = self.plugin_modes[m]
                 modes.append({"id": m, "custom": meta.get("name") or "", "icon": meta.get("icon") or pm["icon"],
-                              "def": [pm["ru"], pm["uk"]], "plugin": pm["plugin"], "sub": [pm["subRu"], pm["subUk"]],
+                              "def": [pm.get("en") or pm.get("ru", ""), pm["uk"]], "plugin": pm["plugin"],
+                              "sub": [pm.get("subEn") or pm.get("subRu", ""), pm["subUk"]],
                               **({"color": pm["color"]} if pm.get("color") else {})})
             else:
                 name = meta.get("name") or "?"

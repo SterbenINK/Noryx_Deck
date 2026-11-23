@@ -1,9 +1,9 @@
-МОНИТОР (DDC/CI) — плагин «Монитор»: яркость, контраст и цвета монитора с дека (как кнопками на мониторе).
+MONITOR (DDC/CI) — the «Monitor» plugin: monitor brightness, contrast and colors from the deck (like the monitor's buttons).
 
-Поставить: Настройки → «Плагины» → «Каталог» → «Монитор» → «Установить».
-1. В меню монитора включи DDC/CI (обычно «Система» → «DDC/CI»). Linux: sudo dnf install ddcutil и доступ к /dev/i2c-*
-   (группа i2c).
-2. В доке — яркость каждого монитора и пресеты.
-3. Пресеты: при первом запуске «Сток» (как было настроено) и «Ночь» (яркость 0); свой — выставь ползунки и
-   «Сохранить текущее» с названием. Плитки: «+» в режиме → «Плагины» — по плитке на пресет и «Монитор» (экран со всеми
-   ползунками). Нажал пресет — монитор меняет сразу всё; что уже совпадает — не трогает.
+Install: Settings → «Plugins» → «Catalog» → «Monitor» → «Install».
+1. Turn DDC/CI on in the monitor menu (usually «System» → «DDC/CI»). Linux: sudo dnf install ddcutil and access to /dev/i2c-*
+   (the i2c group).
+2. In the dock — the brightness of each monitor and presets.
+3. Presets: on the first start «Stock» (as it was set up) and «Night» (brightness 0); your own — set the sliders and
+   «Save current» with a name. Tiles: «+» in a mode → «Plugins» — a tile per preset and «Monitor» (a screen with all
+   the sliders). Pressed a preset — the monitor changes everything at once; what already matches isn't touched.

@@ -101,16 +101,18 @@ def _rm(p):
 
 
 def _uk(root):
-    """Язык дека из data/config.json (помощник работает без дека, а лог обновления — тоже на его языке)."""
+    """Язык дека из data/config.json (помощник работает без дека, а лог обновления — тоже на его языке; прежний
+    русский — теперь украинский)."""
     try:
-        return read_json(Path(root) / "data" / "config.json", {})["cfg"]["lang"] == "uk"
+        return read_json(Path(root) / "data" / "config.json", {})["cfg"]["lang"] in ("uk", "ru")
     except Exception:
         return False
 
 
-def note(root, ru, uk=None):
-    """Строка в logs/update.log — там вся история обновлений, в том числе то, что делал помощник."""
-    text = uk if uk is not None and _uk(root) else ru
+def note(root, en, uk=None):
+    """Строка в logs/update.log — там вся история обновлений, в том числе то, что делал помощник. en — английский
+    (все языки, кроме украинского), uk — украинский."""
+    text = uk if uk is not None and _uk(root) else en
     p = Path(root) / "logs" / "update.log"
     try:
         p.parent.mkdir(exist_ok=True)
@@ -274,7 +276,7 @@ def raw(path, ref, token=None, limit=MAX_ZIP):
                accept="application/vnd.github.raw") as r:
         data = r.read(limit + 1)
     if len(data) > limit:
-        raise UpdateError("bad", f"{path}: больше {limit} байт")
+        raise UpdateError("bad", f"{path}: more than {limit} bytes")
     return data
 
 
@@ -345,7 +347,7 @@ def download(sha, token, dest):
                 break
             size += len(chunk)
             if size > MAX_ZIP:
-                raise UpdateError("bad", "архив больше 64 МБ")
+                raise UpdateError("bad", "archive over 64 MB")
             f.write(chunk)
 
 
@@ -371,7 +373,7 @@ def unpack_src(zpath, dest):
     with zipfile.ZipFile(zpath) as z:
         infos = [i for i in z.infolist() if not i.is_dir()]
         if len({i.filename.split("/", 1)[0] for i in infos}) != 1:
-            raise UpdateError("bad", "архив")
+            raise UpdateError("bad", "archive")
         for i in infos:
             rel = i.filename.split("/", 1)[1] if "/" in i.filename else ""
             mode = i.external_attr >> 16
@@ -394,7 +396,7 @@ def build_payload(src, lay, version, nxt, root=ROOT):
         script = src / "packaging" / kind / ("make_zip.py" if kind == "windows" else "make_linux.py")
         rc, txt = _run([console_python(), str(script), str(out)], src, 300, env)
         tail = "" if rc == 0 else "\n" + txt[-2000:]
-        note(root, f"сборка ({kind}): код {rc}{tail}", f"збирання ({kind}): код {rc}{tail}")
+        note(root, f"build ({kind}): code {rc}{tail}", f"збирання ({kind}): код {rc}{tail}")
         if rc != 0 or not Path(out).is_file():
             raise UpdateError("build", _last_error(txt))
 
@@ -459,7 +461,7 @@ def prepare(info, token, lay, root=ROOT, progress=None):
     for name in ("src", "next", "src.zip", "build.zip", "build.tar.gz", "plan.json"):
         _rm(upd / name)
     upd.mkdir(parents=True, exist_ok=True)
-    note(root, f"обновление до {remote['sha'][:7]} «{remote['msg']}» ({lay}): скачиваю",
+    note(root, f"update to {remote['sha'][:7]} «{remote['msg']}» ({lay}): downloading",
          f"оновлення до {remote['sha'][:7]} «{remote['msg']}» ({lay}): завантажую")
     progress("download")
     download(remote["sha"], token, upd / "src.zip")
@@ -483,7 +485,7 @@ def write_plan(root, lay, version):
     plan = {"version": version, "layout": lay, "files": files, "req": req,
             "python": console_python(), "pythonw": gui_python(), "old": local_version(root), "time": time.time()}
     write_json(upd / "plan.json", plan)
-    note(root, f"посылка готова: файлов {len(files)}, библиотеки {'новые' if req['changed'] else 'те же'}",
+    note(root, f"package ready: {len(files)} files, libraries {'new' if req['changed'] else 'the same'}",
          f"посилка готова: файлів {len(files)}, бібліотеки {'нові' if req['changed'] else 'ті самі'}")
     return plan
 
@@ -518,9 +520,9 @@ def unpack_file(arc, dest):
         raise UpdateError("file", f"{type(e).__name__}: {e}") from None
     with handle:
         if not files:
-            raise UpdateError("file", "пустой архив")
+            raise UpdateError("file", "empty archive")
         if sum(f[1] for f in files) > MAX_UNPACKED:
-            raise UpdateError("file", "больше 256 МБ")
+            raise UpdateError("file", "over 256 MB")
         names = [f[0][2:] if f[0].startswith("./") else f[0] for f in files]
         tops = {n.split("/", 1)[0] for n in names}
         strip = len(tops) == 1 and all("/" in n for n in names)
@@ -534,7 +536,7 @@ def unpack_file(arc, dest):
                 os.chmod(out, 0o755 if mode & 0o111 else 0o644)
     dest = Path(dest)
     if not (dest / "server" / "deck.py").is_file() or not (dest / "client" / "index.html").is_file():
-        raise UpdateError("file", "внутри нет дека")
+        raise UpdateError("file", "no deck inside")
     if (dest / "packaging").is_dir():
         kind = "source"
     elif (dest / "start.sh").is_file() and (dest / "requirements-linux.txt").is_file():
@@ -542,7 +544,7 @@ def unpack_file(arc, dest):
     elif (dest / "server" / "setup.bat").is_file():
         kind = "windows"
     else:
-        raise UpdateError("file", "непонятная сборка")
+        raise UpdateError("file", "unknown build")
     return kind, comment
 
 
@@ -555,7 +557,7 @@ def prepare_file(arc, lay, root=ROOT, progress=None):
     for name in ("src", "next", "src.zip", "build.zip", "build.tar.gz", "plan.json"):
         _rm(upd / name)
     upd.mkdir(parents=True, exist_ok=True)
-    note(root, f"обновление из файла {arc}", f"оновлення з файлу {arc}")
+    note(root, f"update from file {arc}", f"оновлення з файлу {arc}")
     progress("build")
     kind, comment = unpack_file(arc, upd / "src")
     src, nxt = upd / "src", upd / "next"
@@ -711,7 +713,7 @@ def start_deck(root, exe=None):
 def pip_install(root, py, req_file):
     rc, out = _run([py, "-m", "pip", "install", "--disable-pip-version-check", "--no-warn-script-location",
                     "--only-binary=:all:", "-r", str(req_file)], root, 900)
-    note(root, f"pip ({Path(req_file).name}): код {rc}\n{out[-3000:]}", f"pip ({Path(req_file).name}): код {rc}\n{out[-3000:]}")
+    note(root, f"pip ({Path(req_file).name}): code {rc}\n{out[-3000:]}", f"pip ({Path(req_file).name}): код {rc}\n{out[-3000:]}")
     return rc == 0, _last_error(out)
 
 
@@ -723,7 +725,7 @@ def result(root, ok, kind, error=None, detail="", version=None, old=None, final=
                 "time": time.time(), "shown": False})
     if final:
         why = f"({kind}{', ' + error if error else ''}) {detail}".rstrip()
-        note(root, f"итог: {'готово' if ok else 'НЕ ВЫШЛО'} {why}", f"підсумок: {'готово' if ok else 'НЕ ВИЙШЛО'} {why}")
+        note(root, f"result: {'done' if ok else 'FAILED'} {why}", f"підсумок: {'готово' if ok else 'НЕ ВИЙШЛО'} {why}")
 
 
 class Backup:
@@ -796,7 +798,7 @@ def install_files(root, nxt, files, backup):
             backup.stash(rel)
             backup.data["replaced"].append(rel)
         elif dst.exists():
-            raise UpdateError("copy", f"{rel}: на месте файла — папка")
+            raise UpdateError("copy", f"{rel}: a folder where a file should be")
         else:
             backup.data["added"].append(rel)
         backup.save()
@@ -893,7 +895,7 @@ def apply_plan(root):
         return False
 
     if req["changed"]:
-        note(root, "ставлю новые библиотеки", "ставлю нові бібліотеки")
+        note(root, "installing new libraries", "ставлю нові бібліотеки")
         ok, err = pip_install(root, py, nxt / req["path"])
         if not ok:
             return give_up("pip", err)
@@ -902,7 +904,7 @@ def apply_plan(root):
         install_files(root, nxt, plan["files"], backup)
     except Exception as e:
         tb = traceback.format_exc()
-        note(root, "файлы не заменились:\n" + tb, "файли не замінилися:\n" + tb)
+        note(root, "files were not replaced:\n" + tb, "файли не замінилися:\n" + tb)
         backup.restore()
         backup.abort()
         return give_up("copy", e)
@@ -910,8 +912,8 @@ def apply_plan(root):
         _put(nxt / req["path"], root / req["stamp"])
     write_json(upd / "installed.json", plan["files"])
     n = backup.data
-    note(root, f"файлы на месте: заменено {len(n['replaced'])}, новых {len(n['added'])}, убрано {len(n['removed'])}"
-               " — запускаю дек",
+    note(root, f"files in place: replaced {len(n['replaced'])}, new {len(n['added'])}, removed {len(n['removed'])}"
+               " — starting the deck",
          f"файли на місці: замінено {len(n['replaced'])}, нових {len(n['added'])}, прибрано {len(n['removed'])}"
          " — запускаю дек")
     # новую версию не проверяем: её проверили до main (CI); прошлая лежит в update/prev — кнопка «Вернуть»
@@ -949,18 +951,18 @@ def helper_main(mode, pid, root=ROOT):
     upd = root / "update"
     upd.mkdir(parents=True, exist_ok=True)
     if helper_running(root):               # второй помощник сразу за первым — не мешаем ему
-        note(root, f"помощник ({mode}): уже работает другой — выхожу", f"помічник ({mode}): уже працює інший — виходжу")
+        note(root, f"helper ({mode}): another one is already running — exiting", f"помічник ({mode}): уже працює інший — виходжу")
         return 1
     (upd / "helper.pid").write_text(str(os.getpid()))
     try:
-        note(root, f"помощник ({mode}): жду, пока дек закроется", f"помічник ({mode}): чекаю, поки дек закриється")
+        note(root, f"helper ({mode}): waiting for the deck to close", f"помічник ({mode}): чекаю, поки дек закриється")
         if not _wait(lambda: not pid_alive(pid), 20) and port_free() and _is_deck(pid):
             # дек уже всё сохранил и закрыл порт, а процесс не завершается (так бывает под Wine) — добиваем
-            note(root, "дек закрыл порт, но процесс не завершился — завершаю его",
+            note(root, "the deck closed the port, but the process didn't exit — ending it",
                  "дек закрив порт, але процес не завершився — завершую його")
             kill_pid(pid)
         if not _wait(lambda: not pid_alive(pid), 20) or not _wait(port_free, 40):
-            note(root, "дек не закрылся — отменяю", "дек не закрився — скасовую")
+            note(root, "the deck didn't close — cancelling", "дек не закрився — скасовую")
             result(root, False, mode, "busy")
             return 1
         time.sleep(0.5)
@@ -968,12 +970,12 @@ def helper_main(mode, pid, root=ROOT):
         return 0 if ok else 1
     except Exception:
         tb = traceback.format_exc()
-        note(root, "помощник упал:\n" + tb, "помічник упав:\n" + tb)
+        note(root, "helper crashed:\n" + tb, "помічник упав:\n" + tb)
         if not deck_alive():          # что бы ни случилось — дек должен работать
             try:
                 start_deck(root)
             except Exception as e:      # дек остался выключенным — пусть в истории будет видно почему
-                note(root, f"дек не запустился после сбоя помощника: {type(e).__name__}: {e}",
+                note(root, f"the deck didn't start after the helper failed: {type(e).__name__}: {e}",
                      f"дек не запустився після збою помічника: {type(e).__name__}: {e}")
         return 1
     finally:
@@ -1019,21 +1021,21 @@ class Controller:
         code, detail = self.error
         tr = self.deck.tr
         text = {
-            "net": tr("Нет связи с GitHub", "Немає зв’язку з GitHub"),
-            "private": tr("Репозиторий приватный — нужен токен GitHub", "Репозиторій приватний — потрібен токен GitHub"),
-            "token": tr("Токен не подходит или не даёт доступа к репозиторию",
+            "net": tr("No connection to GitHub", "Немає зв’язку з GitHub"),
+            "private": tr("The repository is private — a GitHub token is needed", "Репозиторій приватний — потрібен токен GitHub"),
+            "token": tr("The token doesn't fit or gives no access to the repository",
                         "Токен не підходить або не дає доступу до репозиторію"),
-            "rate": tr("GitHub ограничил число запросов — попробую позже",
+            "rate": tr("GitHub limited the number of requests — I'll try later",
                        "GitHub обмежив кількість запитів — спробую пізніше"),
-            "bad": tr("Архив с GitHub не похож на дек", "Архів з GitHub не схожий на дек"),
-            "build": tr("Новая версия не собралась", "Нова версія не зібралася"),
-            "test": tr("Новая версия не запускается", "Нова версія не запускається"),
-            "helper": tr("Не запустился помощник обновления", "Не запустився помічник оновлення"),
-            "http": tr("GitHub ответил ошибкой", "GitHub відповів помилкою"),
-            "file": tr("Архив не подходит", "Архів не підходить"),
-            "kind": tr("Это сборка для другой системы", "Це збірка для іншої системи"),
-            "pick": tr("Не открылось окно выбора файла", "Не відкрилося вікно вибору файлу"),
-        }.get(code, tr("Ошибка", "Помилка"))
+            "bad": tr("The archive from GitHub doesn't look like the deck", "Архів з GitHub не схожий на дек"),
+            "build": tr("The new version didn't build", "Нова версія не зібралася"),
+            "test": tr("The new version doesn't start", "Нова версія не запускається"),
+            "helper": tr("The update helper didn't start", "Не запустився помічник оновлення"),
+            "http": tr("GitHub returned an error", "GitHub відповів помилкою"),
+            "file": tr("The archive doesn't fit", "Архів не підходить"),
+            "kind": tr("This build is for a different system", "Це збірка для іншої системи"),
+            "pick": tr("The file picker didn't open", "Не відкрилося вікно вибору файлу"),
+        }.get(code, tr("Error", "Помилка"))
         return text + (f": {detail}" if detail and code in ("build", "test", "http", "bad", "net", "file", "kind", "pick")
                        else "")
 
@@ -1045,18 +1047,17 @@ class Controller:
         msg = (r.get("version") or {}).get("msg") or ""
         if r.get("ok"):
             if r.get("kind") == "rollback":
-                return tr("Вернул прошлую версию дека", "Повернув попередню версію дека")
-            return tr("Дек обновлён: ", "Дек оновлено: ") + f"«{msg}»"
-        why = {"pip": tr("не встали библиотеки", "не встановилися бібліотеки"),
-               "test": tr("новая версия не запускается", "нова версія не запускається"),
-               "start": tr("новая версия не запустилась", "нова версія не запустилася"),
-               "copy": tr("не удалось заменить файлы", "не вдалося замінити файли"),
-               "busy": tr("дек не закрылся", "дек не закрився"),
-               "noprev": tr("нет прошлой версии", "немає попередньої версії")}.get(r.get("error"), r.get("error") or "?")
+                return tr("Restored the previous deck version", "Повернув попередню версію дека")
+            return tr("Deck updated: ", "Дек оновлено: ") + f"«{msg}»"
+        why = {"pip": tr("libraries didn't install", "не встановилися бібліотеки"),
+               "test": tr("the new version doesn't start", "нова версія не запускається"),
+               "start": tr("the new version didn't start", "нова версія не запустилася"),
+               "copy": tr("couldn't replace the files", "не вдалося замінити файли"),
+               "busy": tr("the deck didn't close", "дек не закрився"),
+               "noprev": tr("no previous version", "немає попередньої версії")}.get(r.get("error"), r.get("error") or "?")
         if r.get("kind") == "rollback":
-            return tr("Откат не вышел: ", "Відкат не вдався: ") + why
-        return tr(f"Обновление не встало ({why}) — работает прежняя версия",
-                  f"Оновлення не встало ({why}) — працює попередня версія")
+            return tr("Rollback failed: ", "Відкат не вдався: ") + why
+        return tr("The update didn't install ({0}) — the previous version is running", "Оновлення не встало ({0}) — працює попередня версія", why)
 
     def msg(self):
         i = self.info or {}
@@ -1077,11 +1078,11 @@ class Controller:
         if not self.can():
             return None                 # клон git и непонятные папки дек сам не обновляет — пункта нет
         if self.busy:
-            return tr("Обновление…", "Оновлення…")
+            return tr("Updating…", "Оновлення…")
         if i.get("state") != "ahead":
-            return tr("Обновить дек", "Оновити дек")
+            return tr("Update the deck", "Оновити дек")
         m = i["remote"]["msg"]
-        return tr("Обновить дек: ", "Оновити дек: ") + (m if len(m) <= 40 else m[:39] + "…")
+        return tr("Update the deck: ", "Оновити дек: ") + (m if len(m) <= 40 else m[:39] + "…")
 
     def tray_notify(self, text):
         t = getattr(self.deck, "tray", None)
@@ -1138,8 +1139,7 @@ class Controller:
         if self.busy or i.get("state") != "ahead" or i["remote"]["sha"] in self.told:
             return
         self.told.add(i["remote"]["sha"])
-        self.tray_notify(self.deck.tr(f"Доступно обновление: «{i['remote']['msg']}». Обновить — в трее или в настройках",
-                                      f"Доступне оновлення: «{i['remote']['msg']}». Оновити — у треї або в налаштуваннях"))
+        self.tray_notify(self.deck.tr("Update available: «{0}». Update from the tray or in settings", "Доступне оновлення: «{0}». Оновити — у треї або в налаштуваннях", i['remote']['msg']))
 
     def want_auto(self, first):
         i = self.info or {}
@@ -1175,10 +1175,10 @@ class Controller:
                 self.told.add(i["remote"]["sha"])
             tr = self.deck.tr
             text = self.error_text() if not ok else {
-                "latest": tr("Это последняя версия", "Це остання версія"),
-                "ahead": tr("Есть новая версия", "Є нова версія"),
-                "behind": tr("Эта версия новее, чем в main", "Ця версія новіша, ніж у main"),
-            }.get(i.get("state"), tr("В main другая версия", "У main інша версія"))
+                "latest": tr("This is the latest version", "Це остання версія"),
+                "ahead": tr("New version available", "Є нова версія"),
+                "behind": tr("This version is newer than main", "Ця версія новіша, ніж у main"),
+            }.get(i.get("state"), tr("main has a different version", "У main інша версія"))
             await self.deck.toast(text)
             if notify:
                 self.tray_notify(text)
@@ -1206,14 +1206,14 @@ class Controller:
         sha, tr = i["remote"]["sha"], self.deck.tr
         if helper_running(self.root):
             if not auto:
-                await self.deck.toast(tr("Прошлое обновление ещё завершается — попробуй через минуту",
+                await self.deck.toast(tr("The previous update is still finishing — try in a minute",
                                          "Попереднє оновлення ще завершується — спробуй за хвилину"))
             return
         if not auto:
             self.failed.discard(sha)
             if self.skipped(sha):
                 skip(self.root, sha, on=False)
-        log.info("Обновление до %s «%s»%s", sha[:7], i["remote"]["msg"], tr(" (само)", " (саме)") if auto else "")
+        log.info("Обновление до %s «%s»%s", sha[:7], i["remote"]["msg"], tr(" (auto)", " (саме)") if auto else "")
         await self.install("download", prepare, i, self.token(), self.lay, self.root, sha=sha)
 
     async def pick_file(self):
@@ -1221,15 +1221,15 @@ class Controller:
         tr = self.deck.tr
         if self.busy or not self.can():
             if not self.can():
-                await self.deck.toast(tr("Эту папку дека обновлять нельзя", "Цю теку дека оновлювати не можна"))
+                await self.deck.toast(tr("This deck folder can't be updated", "Цю теку дека оновлювати не можна"))
             return
         if helper_running(self.root):
-            await self.deck.toast(tr("Прошлое обновление ещё завершается — попробуй через минуту",
+            await self.deck.toast(tr("The previous update is still finishing — try in a minute",
                                      "Попереднє оновлення ще завершується — спробуй за хвилину"))
             return
         self.busy, self.error = "pick", None
         await self.push()
-        await self.deck.toast(tr("Открыл на ПК окно выбора архива", "Відкрив на ПК вікно вибору архіву"))
+        await self.deck.toast(tr("Opened an archive picker on the PC", "Відкрив на ПК вікно вибору архіву"))
         try:
             path = await asyncio.get_running_loop().run_in_executor(None, self.ask_archive)
         except Exception as e:
@@ -1247,8 +1247,8 @@ class Controller:
         import i18n
         mod = __import__("apps" if IS_WIN else "lx_apps")
         tr = i18n.tr
-        files = mod.ask_files(tr("Noryx — выбери архив обновления", "Noryx — обери архів оновлення"),
-                              [(tr("Архив дека", "Архів дека"), "*.zip;*.tar.gz;*.tgz"), (tr("Все файлы", "Усі файли"), "*.*")],
+        files = mod.ask_files(tr("Noryx — choose an update archive", "Noryx — обери архів оновлення"),
+                              [(tr("Deck archive", "Архів дека"), "*.zip;*.tar.gz;*.tgz"), (tr("All files", "Усі файли"), "*.*")],
                               start=downloads_dir())
         return files[0] if files else None
 
@@ -1256,7 +1256,7 @@ class Controller:
         tr = self.deck.tr
         if self.busy or not self.can() or not str(path).lower().endswith(ARCHIVE_EXTS):
             if not self.busy:
-                await self.deck.toast(tr("Нужен архив дека: .zip или .tar.gz", "Потрібен архів дека: .zip або .tar.gz"))
+                await self.deck.toast(tr("A deck archive is needed: .zip or .tar.gz", "Потрібен архів дека: .zip або .tar.gz"))
             return
         log.info("Обновление из файла: %s", path)
         await self.install("build", prepare_file, str(path), self.lay, self.root)
@@ -1284,9 +1284,9 @@ class Controller:
                 self.failed.add(sha)
             self.busy, self.error = None, (e.code, e.detail)
             await self.push()
-            await self.deck.toast(tr("Обновление не готово: ", "Оновлення не готове: ") + self.error_text())
+            await self.deck.toast(tr("The update isn't ready: ", "Оновлення не готове: ") + self.error_text())
             return
-        await self.deck.toast(tr("Ставлю обновление — дек перезапустится", "Ставлю оновлення — дек перезапуститься"))
+        await self.deck.toast(tr("Installing the update — the deck will restart", "Ставлю оновлення — дек перезапуститься"))
         await asyncio.sleep(0.3)
         self.deck.stop_for("update")
 
@@ -1294,7 +1294,7 @@ class Controller:
         if self.busy or not (self.root / "update" / "prev" / "backup.json").exists():
             return
         if helper_running(self.root):
-            await self.deck.toast(self.deck.tr("Прошлое обновление ещё завершается — попробуй через минуту",
+            await self.deck.toast(self.deck.tr("The previous update is still finishing — try in a minute",
                                                "Попереднє оновлення ще завершується — спробуй за хвилину"))
             return
         self.busy = "restart"
@@ -1303,7 +1303,7 @@ class Controller:
             self.busy, self.error = None, ("helper", "")
             await self.push()
             return
-        await self.deck.toast(self.deck.tr("Возвращаю прошлую версию — дек перезапустится",
+        await self.deck.toast(self.deck.tr("Restoring the previous version — the deck will restart",
                                            "Повертаю попередню версію — дек перезапуститься"))
         await asyncio.sleep(0.3)
         self.deck.stop_for("update")
@@ -1311,13 +1311,13 @@ class Controller:
     async def set_token(self, token):
         token, tr = str(token or "").strip(), self.deck.tr
         if token and not re.fullmatch(r"(github_pat_|ghp_)[A-Za-z0-9_]{20,255}", token):
-            await self.deck.toast(tr("Это не похоже на токен GitHub (github_pat_… или ghp_…)",
+            await self.deck.toast(tr("This doesn't look like a GitHub token (github_pat_… or ghp_…)",
                                      "Це не схоже на токен GitHub (github_pat_… або ghp_…)"))
             return
         save_user_state(self.root, token=token or None)
-        log.info("Токен GitHub для обновлений: %s", tr("задан", "задано") if token else tr("убран", "прибрано"))
-        await self.deck.toast(tr("Токен сохранён на ПК", "Токен збережено на ПК") if token
-                              else tr("Токен убран", "Токен прибрано"))
+        log.info("Токен GitHub для обновлений: %s", tr("set", "задано") if token else tr("removed", "прибрано"))
+        await self.deck.toast(tr("Token saved on the PC", "Токен збережено на ПК") if token
+                              else tr("Token removed", "Токен прибрано"))
         await self.check(manual=bool(token))
 
 

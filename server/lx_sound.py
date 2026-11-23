@@ -223,11 +223,11 @@ class PulseFactory:
         if kind == "in":
             dev = self._in_names.get(name)
             if dev is None:
-                raise LookupError(f"Не найдено: {name}")
+                raise LookupError(f"Not found: {name}")
             return PulseStream(self.np, dev, callback, "in", "Саундпад — голос")
         dev = self._names.get(name)
         if dev is None:
-            raise LookupError(f"Не найдено: {name}")
+            raise LookupError(f"Not found: {name}")
         if dev == OWN_SINK:
             self.ensure_virtual_mic()
         title = "Саундпад — в эфир" if dev == OWN_SINK else "Саундпад"

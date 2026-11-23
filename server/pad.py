@@ -523,15 +523,15 @@ class Pad:
             try:
                 out.stream = self.stream_factory(name, out.callback)
             except Exception as e:
-                out.stream, out.error = None, str(e) if str(e).startswith("Не найдено") else f"Не открылось {name}: {e}"
+                out.stream, out.error = None, str(e) if str(e).startswith("Not found") else f"Didn't open {name}: {e}"
                 log.warning("Саундпад: %s", out.error)
                 return False
             out.device, out.rate, out.error = name, RATE, None
-            log.info("Саундпад: %s → %s", i18n.tr("себе", "собі") if out.role == "me" else i18n.tr("в эфир", "в ефір"), name)
+            log.info("Саундпад: %s → %s", i18n.tr("for me", "собі") if out.role == "me" else i18n.tr("on air", "в ефір"), name)
             return True
         sd = self.sd
         if not sd:
-            out.error = "Нет звуковой подсистемы"
+            out.error = "No sound system"
             return False
         hi = self._wasapi()
         idx = None
@@ -540,7 +540,7 @@ class Pad:
                 idx = i
                 break
         if idx is None:
-            out.error = f"Не найдено: {name}"
+            out.error = f"Not found: {name}"
             return False
         tries = []
         if hi is not None:
@@ -553,11 +553,11 @@ class Pad:
                                     blocksize=BLOCK, callback=out.callback, extra_settings=extra)
                 s.start()
                 out.stream, out.device, out.rate, out.error = s, name, rate, None
-                log.info("Саундпад: %s → %s (%d Гц)", i18n.tr("себе", "собі") if out.role == "me" else i18n.tr("в эфир", "в ефір"), name, rate)
+                log.info("Саундпад: %s → %s (%d Гц)", i18n.tr("for me", "собі") if out.role == "me" else i18n.tr("on air", "в ефір"), name, rate)
                 return True
             except Exception as e:
                 err = e
-        out.error = f"Не открылось {name}: {err}"
+        out.error = f"Didn't open {name}: {err}"
         log.warning("Саундпад: %s", out.error)
         return False
 
@@ -582,7 +582,7 @@ class Pad:
             try:
                 vin.stream = self.stream_factory(name, vin.callback, "in")
             except Exception as e:
-                vin.stream, vin.error = None, str(e) if str(e).startswith("Не найдено") else f"Не открылся микрофон {name}: {e}"
+                vin.stream, vin.error = None, str(e) if str(e).startswith("Not found") else f"The mic didn't open {name}: {e}"
                 log.warning("Саундпад: %s", vin.error)
                 return False
             vin.device, vin.rate, vin.error = name, RATE, None
@@ -590,7 +590,7 @@ class Pad:
             return True
         sd = self.sd
         if not sd:
-            vin.error = "Нет звуковой подсистемы"
+            vin.error = "No sound system"
             return False
         hi = self._wasapi()
         idx = None
@@ -599,7 +599,7 @@ class Pad:
                 idx = i
                 break
         if idx is None:
-            vin.error = f"Не найдено: {name}"
+            vin.error = f"Not found: {name}"
             return False
         tries = [(RATE, sd.WasapiSettings(auto_convert=True))] if hi is not None else []
         tries.append((RATE, None))
@@ -614,7 +614,7 @@ class Pad:
                 return True
             except Exception as e:
                 err = e
-        vin.error = f"Не открылся микрофон {name}: {err}"
+        vin.error = f"The mic didn't open {name}: {err}"
         log.warning("Саундпад: %s", vin.error)
         return False
 
@@ -660,7 +660,7 @@ class Pad:
             ok = self._open_in(self._voice_device())
         if not ok:
             self.voice_retry = now + 5.0
-            if any(e and e.startswith("Не найдено") for e in (out.error, vin.error)):
+            if any(e and e.startswith("Not found") for e in (out.error, vin.error)):
                 self._close_all()                 # устройство пропало/появилось — перечитать список
                 self._refresh_devices(force=True)
                 self._push_list()
@@ -710,7 +710,7 @@ class Pad:
         if sid not in self.paths:
             return
         for o in self.outs.values():
-            if o.error and not o.error.startswith("Не открылось"):
+            if o.error and not o.error.startswith("Didn't open"):
                 o.error = None
         if any(sid in o.playing() for o in self.outs.values()):
             for o in self.outs.values():
@@ -782,9 +782,9 @@ def pick_files():
         from apps import ask_files
     else:
         from lx_apps import ask_files
-    files = ask_files(i18n.tr("Noryx — выбери звуки", "Noryx — обери звуки"),
-                      [(i18n.tr("Звуки", "Звуки"), ";".join("*" + e for e in sorted(EXTS))),
-                       (i18n.tr("Все файлы", "Усі файли"), "*.*")], multi=True)
+    files = ask_files(i18n.tr("Noryx — choose sounds", "Noryx — обери звуки"),
+                      [(i18n.tr("Sounds", "Звуки"), ";".join("*" + e for e in sorted(EXTS))),
+                       (i18n.tr("All files", "Усі файли"), "*.*")], multi=True)
     added = []
     for f in files or ():
         src = Path(f)

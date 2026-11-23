@@ -63,7 +63,7 @@ def set_autorun(on):
             winreg.DeleteValue(k, OLD_RUN_NAME)
         except OSError:
             pass
-    log.info("Автозапуск с Windows: %s", i18n.tr("включён", "увімкнено") if on else i18n.tr("выключен", "вимкнено"))
+    log.info("Автозапуск с Windows: %s", i18n.tr("on", "увімкнено") if on else i18n.tr("off", "вимкнено"))
 
 
 def spawn_restart():
@@ -88,8 +88,9 @@ class Tray:
         self.on_update = None
         self.on_update_file = None
 
-    def tr(self, ru, uk):
-        return uk if self.uk() else ru
+    def tr(self, en, uk, *args):
+        import i18n
+        return i18n.tr(en, uk, *args)
 
     def lang_changed(self):
         """Язык сменили в настройках дека — перерисовать меню."""
@@ -139,20 +140,20 @@ class Tray:
         P = pystray
         menu = P.Menu(
             # подписи — функциями: pystray перечитывает их при update_menu() после смены языка
-            P.MenuItem(lambda item: self.tr("Открыть дек", "Відкрити дек"), lambda icon, item: webbrowser.open(self.url_local), default=True),
-            P.MenuItem(lambda item: self.tr("С телефона: ", "З телефона: ") + self.url_phone, lambda icon, item: None, enabled=False),
+            P.MenuItem(lambda item: self.tr("Open the deck", "Відкрити дек"), lambda icon, item: webbrowser.open(self.url_local), default=True),
+            P.MenuItem(lambda item: self.tr("From the phone: ", "З телефона: ") + self.url_phone, lambda icon, item: None, enabled=False),
             P.Menu.SEPARATOR,
             P.MenuItem(lambda item: self._upd() or "", lambda icon, item: self._update(), visible=lambda item: bool(self._upd())),
-            P.MenuItem(lambda item: self.tr("Обновить из файла…", "Оновити з файлу…"), lambda icon, item: self._update_file(),
+            P.MenuItem(lambda item: self.tr("Update from file…", "Оновити з файлу…"), lambda icon, item: self._update_file(),
                        visible=lambda item: bool(self._upd())),
             P.Menu.SEPARATOR,
-            P.MenuItem(lambda item: self.tr("Запускать вместе с Windows", "Запускати разом з Windows"), lambda icon, item: self._toggle_autorun(),
+            P.MenuItem(lambda item: self.tr("Start with Windows", "Запускати разом з Windows"), lambda icon, item: self._toggle_autorun(),
                        checked=lambda item: is_autorun()),
-            P.MenuItem(lambda item: self.tr("Открыть лог", "Відкрити лог"), lambda icon, item: self._open(ROOT / "logs" / "server.log")),
-            P.MenuItem(lambda item: self.tr("Открыть папку дека", "Відкрити папку дека"), lambda icon, item: self._open(ROOT)),
+            P.MenuItem(lambda item: self.tr("Open log", "Відкрити лог"), lambda icon, item: self._open(ROOT / "logs" / "server.log")),
+            P.MenuItem(lambda item: self.tr("Open deck folder", "Відкрити папку дека"), lambda icon, item: self._open(ROOT)),
             P.Menu.SEPARATOR,
-            P.MenuItem(lambda item: self.tr("Перезапустить", "Перезапустити"), lambda icon, item: self._restart()),
-            P.MenuItem(lambda item: self.tr("Выход", "Вихід"), lambda icon, item: self._quit()),
+            P.MenuItem(lambda item: self.tr("Restart", "Перезапустити"), lambda icon, item: self._restart()),
+            P.MenuItem(lambda item: self.tr("Quit", "Вихід"), lambda icon, item: self._quit()),
         )
         self.icon = P.Icon("Noryx", _image(), f"Noryx\n{self.url_phone}", menu)
         threading.Thread(target=self._run, name="tray", daemon=True).start()
@@ -168,7 +169,7 @@ class Tray:
             icon.visible = True
             if self.greet:
                 try:
-                    icon.notify(self.tr("Сервер работает", "Сервер працює"), "Noryx")
+                    icon.notify(self.tr("Server is running", "Сервер працює"), "Noryx")
                 except Exception:
                     pass
         try:

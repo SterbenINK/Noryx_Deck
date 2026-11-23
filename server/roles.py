@@ -8,15 +8,18 @@
 Ограничения проверяет сервер (Deck.handle, Deck.send): страница прячет лишнее только для удобства. Роль хранится
 у устройства в data/phones.json (Pairing), назначает её основной дек в окне «Устройства».
 """
+import i18n
+
 ROLES = ["main", "panel", "monitor", "guest"]
-LABELS = {"main": ("Основной дек", "Основний дек"), "panel": ("Игровая панель", "Ігрова панель"),
-          "monitor": ("Экран мониторинга", "Екран моніторингу"), "guest": ("Гость", "Гість")}
-ABOUT = {"main": ("Всё, как сейчас", "Усе, як зараз"),
-         "panel": ("Только выбранные режимы: плитки, звук, плеер, саундпад; без настроек и правки",
+# (английский — основа и ключ пакета языка, украинский)
+LABELS = {"main": ("Main deck", "Основний дек"), "panel": ("Game panel", "Ігрова панель"),
+          "monitor": ("Monitoring screen", "Екран моніторингу"), "guest": ("Guest", "Гість")}
+ABOUT = {"main": ("Everything, as it is now", "Усе, як зараз"),
+         "panel": ("Only the chosen modes: tiles, sound, player, soundpad; no settings or editing",
                    "Лише вибрані режими: плитки, звук, плеєр, саундпад; без налаштувань і правки"),
-         "monitor": ("Только смотреть: режимы, плеер, визуализатор, диагностика — нажимать нельзя",
+         "monitor": ("View only: modes, player, visualizer, diagnostics — no pressing",
                      "Лише дивитися: режими, плеєр, візуалізатор, діагностика — натискати не можна"),
-         "guest": ("Выбранные режимы: плитки и плеер; без настроек, буфера обмена и диагностики",
+         "guest": ("The chosen modes: tiles and player; no settings, clipboard or diagnostics",
                    "Вибрані режими: плитки й плеєр; без налаштувань, буфера обміну й діагностики")}
 
 VIEW = {"ping", "viz", "eventsRead"}       # смотреть: открыть режим на телефоне — это только вид, без смены режима ПК
@@ -33,7 +36,7 @@ HIDDEN = {"clip", "devices", "phones", "pairCode", "healthReport", "health", "ca
 
 def label(role, lang):
     r = LABELS.get(role, LABELS["main"])
-    return r[1] if lang == "uk" else r[0]
+    return r[1] if lang == "uk" else i18n.PACK.get(r[0], r[0])
 
 
 def clean(v, exists=None):

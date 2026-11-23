@@ -11,21 +11,25 @@ import queue
 import threading
 import time
 
-NAME = {"ru": "Монитор (DDC/CI)", "uk": "Монітор (DDC/CI)"}
-ABOUT = {"ru": "Яркость, контраст и цвета монитора с дека, пресеты одной кнопкой",
+NAME = {"en": "Monitor (DDC/CI)", "uk": "Монітор (DDC/CI)"}
+ABOUT = {"en": "Monitor brightness, contrast and colors from the deck, presets in one tap",
          "uk": "Яскравість, контраст і кольори монітора з дека, пресети однією кнопкою"}
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = ["devices", "native", "launch"]
-VERSION = "1.0.1"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
-CHANGES = [("1.0.1", "Инструкция — в README плагина", "Інструкція — у README плагіна"),
-           ("1.0.0", "Первая версия в каталоге: яркость, контраст, цвета, пресеты",
+VERSION = "1.1.1"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
+CHANGES = [("1.1.1", "Instructions (README) in English", "Інструкція (README) — англійською й українською"),
+           ("1.1.0", "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+            "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"),
+           ("1.0.1", "Instructions — in the plugin README", "Інструкція — у README плагіна"),
+           ("1.0.0", "First version in the catalog: brightness, contrast, colors, presets",
             "Перша версія в каталозі: яскравість, контраст, кольори, пресети")]
 
 GAP = 0.12                          # с между командами (Samsung иначе пропускает вторую)
 POLL = 30                           # с — перечитать яркость / контраст (вдруг меняли кнопками монитора)
-# что показываем, если монитор отвечает: код VCP → (рус, укр)
-CODES = {0x10: ("Яркость", "Яскравість"), 0x12: ("Контраст", "Контраст"), 0x16: ("Красный", "Червоний"),
-         0x18: ("Зелёный", "Зелений"), 0x1A: ("Синий", "Синій"), 0x62: ("Громкость", "Гучність")}
+# что показываем, если монитор отвечает: код VCP → (англ., укр.)
+CODES = {0x10: ("Brightness", "Яскравість"), 0x12: ("Contrast", "Контраст"), 0x16: ("Red", "Червоний"),
+         0x18: ("Green", "Зелений"), 0x1A: ("Blue", "Синій"), 0x62: ("Volume", "Гучність")}
 COLOR = {0x10: "#FFC845", 0x12: "#B8C2D6", 0x16: "#FF4A4A", 0x18: "#3DDC6A", 0x1A: "#4A8CFF"}  # цвет ползунка
 QUICK = (0x10, 0x12)                # в доке и при опросе
 
@@ -90,7 +94,7 @@ class Plugin:
 
     # ---------- работа с монитором (только в потоке ddc) ----------
     def probe(self):
-        self.busy = self.api.tr("Ищу мониторы…", "Шукаю монітори…")
+        self.busy = self.api.tr("Looking for monitors…", "Шукаю монітори…")
         self.push()
         if self.dev is None:
             if self.make:
@@ -110,7 +114,7 @@ class Plugin:
             if vals:                                 # не отвечает ни на что — DDC/CI выключен
                 mons.append({"key": m["key"], "name": m["name"], "vals": vals})
         self.mons, self.busy = mons, ""
-        self.err = "" if mons else self.api.tr("Мониторы не ответили по DDC/CI — включи DDC/CI в меню монитора",
+        self.err = "" if mons else self.api.tr("Monitors didn't answer over DDC/CI — turn DDC/CI on in the monitor menu",
                                                "Монітори не відповіли по DDC/CI — увімкни DDC/CI в меню монітора")
         self.seed()
         self.push()
@@ -161,7 +165,7 @@ class Plugin:
                 if cur[0] != int(v):
                     self.write(m, code, v)
         self.busy = ""
-        self.api.event(self.api.tr(f"Монитор: пресет «{name}»", f"Монітор: пресет «{name}»"))
+        self.api.event(self.api.tr("Monitor: preset «{0}»", "Монітор: пресет «{0}»", name))
         self.push()
 
     # ---------- пресеты ----------
@@ -170,9 +174,10 @@ class Plugin:
         c = self.api.cfg
         if c["presets"] or not self.mons:
             return
-        c["presets"]["Сток"] = {m["key"]: {str(k): v[0] for k, v in m["vals"].items() if k != 0x62} for m in self.mons}
-        c["presets"]["Ночь"] = {"*": {"16": 0}}
-        c["order"] = ["Сток", "Ночь"]
+        stock, night = self.api.tr("Stock", "Сток"), self.api.tr("Night", "Ніч")      # имена — на языке дека при первом запуске
+        c["presets"][stock] = {m["key"]: {str(k): v[0] for k, v in m["vals"].items() if k != 0x62} for m in self.mons}
+        c["presets"][night] = {"*": {"16": 0}}
+        c["order"] = [stock, night]
         self.api.call(self.api.save)
 
     def active(self, name):
@@ -218,7 +223,7 @@ class Plugin:
             if name not in c["order"]:
                 c["order"].append(name)
             self.api.save()
-            self.api.toast(self.api.tr(f"Пресет «{name}» сохранён", f"Пресет «{name}» збережено"))
+            self.api.toast(self.api.tr("Preset «{0}» saved", "Пресет «{0}» збережено", name))
         elif aid.startswith("del:"):
             name = aid[4:]
             c["presets"].pop(name, None)
@@ -234,7 +239,7 @@ class Plugin:
         if self.busy:
             status.append({"type": "label", "label": self.busy})
         if self.err:
-            status.append({"type": "text", "label": tr("Монитор", "Монітор"), "value": self.err})
+            status.append({"type": "text", "label": tr("Monitor", "Монітор"), "value": self.err})
 
         def slider(i, m, code):
             cur, mx = m["vals"][code]
@@ -257,20 +262,20 @@ class Plugin:
             cards.append({"type": "card", "title": m["name"], "icon": "monitor", "items": items})
         screen = list(status) + [
             {"type": "grid", "cols": max(1, min(3, len(cards))), "items": cards} if cards else
-            {"type": "text", "label": tr("Мониторов нет", "Моніторів немає"), "value": ""},
-            {"type": "label", "label": tr("Пресеты", "Пресети")}, presets,
-            {"type": "input", "id": "save", "placeholder": tr("Название пресета", "Назва пресета"),
-             "button": tr("Сохранить текущее", "Зберегти поточне")},
-            {"type": "button", "id": "refresh", "label": tr("Найти мониторы заново", "Знайти монітори знову"), "style": "dashed"}]
+            {"type": "text", "label": tr("No monitors", "Моніторів немає"), "value": ""},
+            {"type": "label", "label": tr("Presets", "Пресети")}, presets,
+            {"type": "input", "id": "save", "placeholder": tr("Preset name", "Назва пресета"),
+             "button": tr("Save current", "Зберегти поточне")},
+            {"type": "button", "id": "refresh", "label": tr("Find monitors again", "Знайти монітори знову"), "style": "dashed"}]
         settings = list(status) + [
-            {"type": "text", "label": tr("Мониторы", "Монітори"), "value": ", ".join(m["name"] for m in self.mons) or "—"},
-            {"type": "input", "id": "save", "placeholder": tr("Название пресета", "Назва пресета"),
-             "button": tr("Сохранить текущее", "Зберегти поточне")}] + [
+            {"type": "text", "label": tr("Monitors", "Монітори"), "value": ", ".join(m["name"] for m in self.mons) or "—"},
+            {"type": "input", "id": "save", "placeholder": tr("Preset name", "Назва пресета"),
+             "button": tr("Save current", "Зберегти поточне")}] + [
             {"type": "row", "items": [{"type": "text", "label": n, "value": ""},
-                                      {"type": "button", "id": "del:" + n, "label": tr("Удалить", "Видалити")}]} for n in names] + [
-            {"type": "button", "id": "refresh", "label": tr("Найти мониторы заново", "Знайти монітори знову")}]
-        tiles = [{"id": "screen", "label": tr("Монитор", "Монітор"), "icon": "monitor", "screen": True,
-                  "sub": self.mons[0]["name"] if self.mons else tr("нет связи", "немає зв'язку")}]
-        tiles += [{"id": "p:" + n, "label": n, "icon": "monitor", "on": self.active(n), "sub": tr("пресет монитора", "пресет монітора")}
+                                      {"type": "button", "id": "del:" + n, "label": tr("Delete", "Видалити")}]} for n in names] + [
+            {"type": "button", "id": "refresh", "label": tr("Find monitors again", "Знайти монітори знову")}]
+        tiles = [{"id": "screen", "label": tr("Monitor", "Монітор"), "icon": "monitor", "screen": True,
+                  "sub": self.mons[0]["name"] if self.mons else tr("no connection", "немає зв'язку")}]
+        tiles += [{"id": "p:" + n, "label": n, "icon": "monitor", "on": self.active(n), "sub": tr("monitor preset", "пресет монітора")}
                   for n in names]
         return {"dock": dock, "screen": screen, "settings": settings, "tiles": tiles}

@@ -87,6 +87,7 @@ try:
     import pair as pairmod
     import roles as rolesmod
     import catalog as catmod
+    import langs as langsmod
     import deckmods as modsmod
     import tiles as tilesmod
     import busy
@@ -100,7 +101,7 @@ try:
     import health as healthmod
     from events import Events
     import plugins as plugmod
-    from store import HK, Store
+    from store import HK, MODES, Store
 except Exception:
     log.critical("Не удалось загрузить модули. Переустанови библиотеки: install.bat, а в переносной версии — "
                  "удали папку python (на Linux — .venv) и запусти Start.bat / start.sh.", exc_info=True)
@@ -145,7 +146,7 @@ RAISE_WAIT = 15.0              # сколько ждать окно только
 def version_text():
     """Для лога: коммит и дата из server/version.json (кладут сборка и обновление)."""
     v = updmod.local_version(ROOT)
-    return f"{v['sha'][:7]} {i18n.tr('от', 'від')} {str(v.get('date', ''))[:10]}" if v else VERSION
+    return f"{v['sha'][:7]} {i18n.tr('from', 'від')} {str(v.get('date', ''))[:10]}" if v else VERSION
 
 
 def app_entries(items):
@@ -177,6 +178,8 @@ class Deck:
         self.media = None
         self.plugins = plugmod.Host(self, PLUGINS)
         self.mods = modsmod.Mods(self, MODS)
+        self.langs = langsmod.Langs(ROOT / "langs")   # мовні пакети: langs/<код>.json
+        self.lang_busy = ""                          # какой пакет сейчас качается
         self.catalog = catmod.Center(self, ROOT)   # каталог плагинов: поставить / обновить / откатить моды из main
         self.pad = None
         self.tray = None
@@ -234,6 +237,8 @@ class Deck:
                 v = {key: [c.upper() for c in lst if isinstance(c, str) and HEX_COLOR.fullmatch(c)][:8]
                      for key, lst in (v.items() if isinstance(v, dict) else [])
                      if (key == "user" or self.store.exists(key)) and isinstance(lst, list)}
+            elif k == "lang" and not (v in i18n.BUILTIN or v in self.langs.installed()):
+                continue                     # язык — только встроенный или скачанный пакет (страница «Мови»)
             elif k == "vizHex" and not (isinstance(v, str) and HEX_COLOR.fullmatch(v)):
                 continue
             elif k == "vizColor" and v not in ("auto", "manual"):
@@ -323,7 +328,7 @@ class Deck:
             if fired and self.mode != r["mode"]:
                 if r.get("back"):
                     st.setdefault("back", {})[r["value"]] = (self.mode, r["mode"])
-                await self.toast(self.tr("Автопереключение: ", "Автоперемикання: ") + r.get("label", r["value"]))
+                await self.toast(self.tr("Auto-switch: ", "Автоперемикання: ") + r.get("label", r["value"]))
                 log.info("Автопереключение: %s → %s", r.get("label"), r["mode"])
                 await self.switch_mode(r["mode"], keep={r["value"]} if r["kind"] == "app" else ())
                 return
@@ -331,7 +336,7 @@ class Deck:
             if proc in prev_run and proc not in running:
                 del st["back"][proc]
                 if self.mode == auto and before and self.store.mode_on(before):
-                    await self.toast(self.tr("Автопереключение: обратно", "Автоперемикання: назад"))
+                    await self.toast(self.tr("Auto-switch: back", "Автоперемикання: назад"))
                     await self.switch_mode(before)
 
     # ---------- контекстные действия плитки (программа запущена) ----------
@@ -348,9 +353,12 @@ class Deck:
             await asyncio.sleep(0.15)
         await self.toggle_script(f"ctx:{mode}:{index}", label or it.get("label"), {"script": script}, times=1)
 
-    def tr(self, ru, uk):
-        """Текст для телефона на языке из настроек."""
-        return uk if self.store.cfg.get("lang") == "uk" else ru
+    def tr(self, en, uk, *args):
+        """Текст для телефона и ПК на языке дека (i18n: en / uk в коде, остальные — из мовного пакета)."""
+        st = getattr(self, "store", None)
+        if st is not None:
+            i18n.follow(st.cfg.get("lang"), ROOT)
+        return i18n.tr(en, uk, *args)
 
     # ---------- отправка ----------
     def role_of(self, ws):
@@ -375,7 +383,7 @@ class Deck:
             if sha and self.seen.get("upd") != sha:          # новая версия на GitHub — уведомление, один раз
                 self.seen["upd"] = sha
                 text = msg["remote"].get("msg") or sha[:7]
-                await self.event("update", self.tr("Доступно обновление: ", "Доступне оновлення: ") + text,
+                await self.event("update", self.tr("Update available: ", "Доступне оновлення: ") + text,
                                  level="update", notify=True, link="settings")
 
     async def event(self, kind, text, level="info", notify=False, redo=None, link=None):
@@ -426,7 +434,7 @@ class Deck:
         old = self.base if self.store.overlay(self.mode) else self.mode
         cfg = self.store.cfg
         lay = self.store.layouts
-        parts = [f"{self.tr('Режим', 'Режим')} «{self.store.mode_name(new, self.tr(False, True))}»"]
+        parts = [f"{self.tr('Mode', 'Режим')} «{self.store.mode_name(new)}»"]
         running = apps.running_procs()
         if cfg.get("close") and old and old != new and not self.store.overlay(new):
             keep = {e.get("proc") for e in app_entries(lay.get(new, []))} | set(keep)   # + программа, включившая режим
@@ -447,15 +455,15 @@ class Deck:
             for it in todo:
                 w = why.get(it["proc"])
                 if w:
-                    kept.append(it["label"] + " — " + (self.tr("микрофон", "мікрофон") if w == "mic" else self.tr("игра", "гра")))
+                    kept.append(it["label"] + " — " + (self.tr("microphone", "мікрофон") if w == "mic" else self.tr("game", "гра")))
                     log.info("Не закрываю %s: %s", it["label"], w)
                     continue
                 closed.append(it["label"])
                 asyncio.create_task(apps.close(it["proc"], it.get("target")))
             if closed:
-                parts.append(self.tr("закрываю: ", "закриваю: ") + ", ".join(closed))
+                parts.append(self.tr("closing: ", "закриваю: ") + ", ".join(closed))
             if kept:
-                parts.append(self.tr("не закрываю: ", "не закриваю: ") + ", ".join(kept))
+                parts.append(self.tr("not closing: ", "не закриваю: ") + ", ".join(kept))
         if cfg.get("auto"):
             started = []
             todo = []
@@ -478,13 +486,13 @@ class Deck:
                 except Exception as e:
                     log.warning("Автозапуск %s: %s", it["label"], e)
             if started:
-                parts.append(self.tr("запускаю: ", "запускаю: ") + ", ".join(started))
+                parts.append(self.tr("launching: ", "запускаю: ") + ", ".join(started))
         self.mode = new
         if not self.store.overlay(new):
             self.base = new
         await self.broadcast(self.state_msg())
         await self.toast(" · ".join(parts))
-        await self.event("mode", self.tr("Режим «", "Режим «") + self.store.mode_name(new, self.tr(False, True)) + "»",
+        await self.event("mode", self.tr("Mode «", "Режим «") + self.store.mode_name(new) + "»",
                          redo={"t": "mode", "mode": new})
 
     # ---------- программа: показать, если уже запущена, иначе запустить ----------
@@ -546,19 +554,17 @@ class Deck:
         try:
             if kind == "app":
                 if not it.get("path"):
-                    await self.toast(self.tr(f"«{label}»: программа не найдена. Удали кнопку и добавь через +",
-                                            f"«{label}»: програму не знайдено. Видали кнопку й додай через +"))
+                    await self.toast(self.tr("«{0}»: app not found. Delete the button and add it again with +", "«{0}»: програму не знайдено. Видали кнопку й додай через +", label))
                     return
                 what = await self.open_app(it, apps.running_procs(), toggle=True)
-                await self.toast({"shown": self.tr("Показываю: ", "Показую: "),
-                                  "hidden": self.tr("Сворачиваю: ", "Згортаю: "),
-                                  "starting": self.tr("Уже запускается: ", "Вже запускається: ")}.get(
-                    what, self.tr("Запуск: ", "Запуск: ")) + label)
+                await self.toast({"shown": self.tr("Showing: ", "Показую: "),
+                                  "hidden": self.tr("Minimizing: ", "Згортаю: "),
+                                  "starting": self.tr("Already launching: ", "Вже запускається: ")}.get(
+                    what, self.tr("Launch: ", "Запуск: ")) + label)
             elif kind == "group":
                 members = [x for x in it.get("items", []) if x.get("path")]
                 if not members:
-                    await self.toast(self.tr(f"Группа «{label}» пустая — добавь программы: Правка → «Состав»",
-                                            f"Група «{label}» порожня — додай програми: Редагувати → «Склад»"))
+                    await self.toast(self.tr("Group «{0}» is empty — add apps: Edit → «Contents»", "Група «{0}» порожня — додай програми: Редагувати → «Склад»", label))
                     return
                 running = apps.running_procs()
                 started, shown = [], []
@@ -570,10 +576,10 @@ class Deck:
                             await asyncio.sleep(0.3)
                     except Exception as e:
                         log.warning("Группа %s: %s — %s", label, x["label"], e)
-                parts = ([self.tr("запускаю ", "запускаю ") + ", ".join(started)] if started else []) + (
-                    [self.tr("показываю ", "показую ") + ", ".join(shown)] if shown else [])
-                await self.toast(self.tr(f"Группа «{label}»: ", f"Група «{label}»: ")
-                                 + (" · ".join(parts) or self.tr("не запустилась", "не запустилася")))
+                parts = ([self.tr("launching ", "запускаю ") + ", ".join(started)] if started else []) + (
+                    [self.tr("showing ", "показую ") + ", ".join(shown)] if shown else [])
+                await self.toast(self.tr("Group «{0}»: ", "Група «{0}»: ", label)
+                                 + (" · ".join(parts) or self.tr("didn't start", "не запустилася")))
             elif kind == "plugin":
                 await self.plugins.action(str(it.get("plugin")), str(it.get("action")))
             elif kind == "macro":
@@ -590,23 +596,23 @@ class Deck:
                 elif act == "script":
                     await self.toggle_script(it.get("id") or f"{mode}:{index}", label, it)
                     return
-                await self.toast(self.tr("Макрос: ", "Макрос: ") + label)
+                await self.toast(self.tr("Macro: ", "Макрос: ") + label)
             elif kind == "toggle":
                 act = it.get("action")
                 if act == "mic":
                     muted = await comthread.run(audio.toggle_mic)
-                    await self.toast(self.tr("Микрофон выключен", "Мікрофон вимкнено") if muted
-                                     else self.tr("Микрофон включён", "Мікрофон увімкнено"))
+                    await self.toast(self.tr("Microphone off", "Мікрофон вимкнено") if muted
+                                     else self.tr("Microphone on", "Мікрофон увімкнено"))
                     await self.poll_audio()
                 else:
                     if it.get("keys"):
                         keys.hotkey(it["keys"])
                     self.toggles[label] = not self.toggles.get(label, False)
                     await self.broadcast(self.state_msg())
-                    await self.toast(f"{label}: " + (self.tr("вкл", "увімк") if self.toggles[label] else self.tr("выкл", "вимк")))
+                    await self.toast(f"{label}: " + (self.tr("on", "увімк") if self.toggles[label] else self.tr("off", "вимк")))
         except Exception as e:
             log.exception("Кнопка %s", label)
-            await self.toast(self.tr("Ошибка", "Помилка") + f" «{label}»: {e}")
+            await self.toast(self.tr("Error", "Помилка") + f" «{label}»: {e}")
 
     # ---------- скрипты кнопок (как AutoHotkey) ----------
     def parse_script(self, text):
@@ -619,9 +625,9 @@ class Deck:
                 continue
             st = one[0]
             if st[0] == "mode" and not self.find_mode(st[1]):
-                errors.append((n, self.tr(f"нет режима «{st[1]}»", f"немає режиму «{st[1]}»")))
+                errors.append((n, self.tr("no mode «{0}»", "немає режиму «{0}»", st[1])))
             elif st[0] == "out" and (self.last.get("audio") or {}).get("devices") and not self.find_output(st[1]):
-                errors.append((n, self.tr(f"нет выхода звука «{st[1]}»", f"немає виходу звуку «{st[1]}»")))
+                errors.append((n, self.tr("no sound output «{0}»", "немає виходу звуку «{0}»", st[1])))
         errors.sort(key=lambda e: e[0] or 10 ** 6)
         return steps, errors
 
@@ -631,7 +637,7 @@ class Deck:
         for m in self.store.mode_ids():
             if not self.store.mode_on(m):
                 continue
-            if q in {m.casefold(), self.store.mode_name(m).casefold(), self.store.mode_name(m, True).casefold()}:
+            if q in {m.casefold(), self.store.mode_name(m).casefold()} | {str(v).casefold() for k, v in MODES.get(m, {}).items() if k != "icon"}:
                 return m
         return None
 
@@ -659,12 +665,12 @@ class Deck:
         if kind == "mode":
             m = self.find_mode(st[1])
             if not m:
-                raise ValueError(self.tr(f"нет режима «{st[1]}»", f"немає режиму «{st[1]}»"))
+                raise ValueError(self.tr("no mode «{0}»", "немає режиму «{0}»", st[1]))
             await self.switch_mode(m)
         elif kind in ("run", "close"):
             it = await self.find_app(st[1])
             if not it:
-                raise ValueError(self.tr(f"программа «{st[1]}» не найдена", f"програму «{st[1]}» не знайдено"))
+                raise ValueError(self.tr("app «{0}» not found", "програму «{0}» не знайдено", st[1]))
             if kind == "run":
                 if it.get("proc"):                  # правила автопереключения эту программу пока не трогают
                     self.scen_procs[it["proc"]] = time.monotonic() + SCEN_GRACE
@@ -675,7 +681,7 @@ class Deck:
             await self.poll_audio()
             d = self.find_output(st[1])
             if not d:
-                raise ValueError(self.tr(f"нет выхода звука «{st[1]}»", f"немає виходу звуку «{st[1]}»"))
+                raise ValueError(self.tr("no sound output «{0}»", "немає виходу звуку «{0}»", st[1]))
             await comthread.run(audio.set_default_output, d.get("id"))
             await self.poll_audio()
         elif kind == "vol":
@@ -698,24 +704,23 @@ class Deck:
         if task and not task.done():
             if not task.cancelling():        # уже останавливается (двойной тап) — не дёргаем второй раз
                 task.cancel()
-                await self.toast(self.tr(f"Скрипт «{label}» остановлен", f"Скрипт «{label}» зупинено"))
+                await self.toast(self.tr("Script «{0}» stopped", "Скрипт «{0}» зупинено", label))
             return
         steps, errors = self.parse_script(it.get("script"))
         if errors:
             n, msg = errors[0]
-            await self.toast(f"«{label}»: " + (self.tr(f"строка {n}: ", f"рядок {n}: ") if n else "") + msg)
+            await self.toast(f"«{label}»: " + (self.tr("line {0}: ", "рядок {0}: ", n) if n else "") + msg)
             return
         if not steps:
-            await self.toast(self.tr(f"Скрипт «{label}» пустой", f"Скрипт «{label}» порожній"))
+            await self.toast(self.tr("Script «{0}» is empty", "Скрипт «{0}» порожній", label))
             return
         n, loop = (times, False) if times else scriptmod.repeat_of(it)
         self.scripts[sid] = asyncio.create_task(self.run_script(sid, label, steps, n, loop))
         await self.broadcast(self.state_msg())
         if loop:
-            await self.toast(self.tr(f"«{label}» — по кругу. Нажми ещё раз, чтобы остановить",
-                                     f"«{label}» — по колу. Натисни ще раз, щоб зупинити"))
+            await self.toast(self.tr("«{0}» — on a loop. Press again to stop", "«{0}» — по колу. Натисни ще раз, щоб зупинити", label))
         else:
-            await self.toast(self.tr("Скрипт: ", "Скрипт: ") + label + (f" ×{n}" if n > 1 else ""))
+            await self.toast(self.tr("Script: ", "Скрипт: ") + label + (f" ×{n}" if n > 1 else ""))
 
     async def run_script(self, sid, label, steps, times, loop):
         lp = asyncio.get_running_loop()
@@ -734,7 +739,7 @@ class Deck:
                         try:
                             await self.deck_step(st)
                         except Exception as e:
-                            raise RuntimeError(self.tr(f"шаг {i}: ", f"крок {i}: ") + str(e)) from None
+                            raise RuntimeError(self.tr("step {0}: ", "крок {0}: ", i) + str(e)) from None
                     elif st[0] == "keys":
                         await lp.run_in_executor(None, keys.hotkey, st[1])
                     elif st[0] == "wait":
@@ -752,12 +757,12 @@ class Deck:
                     await asyncio.sleep(max(0.0, scriptmod.MIN_LOOP_MS / 1000 - (lp.time() - t0)))
             log.info("Скрипт «%s»: готово (%d раз)", label, done)
             if not quiet:                     # долгие (сценарии) — и в уведомления, быстрые — только в историю
-                await self.event("script", self.tr(f"«{label}»: готово", f"«{label}»: готово"),
+                await self.event("script", self.tr("«{0}»: done", "«{0}»: готово", label),
                                  notify=lp.time() - t_start > 3)
         except asyncio.CancelledError:
             log.info("Скрипт «%s»: остановлен", label)
             if not quiet:
-                await self.event("script", self.tr(f"«{label}»: остановлен", f"«{label}»: зупинено"))
+                await self.event("script", self.tr("«{0}»: stopped", "«{0}»: зупинено", label))
         except Exception as e:
             log.warning("Скрипт «%s»: %s", label, e)
             await self.toast(f"«{label}»: {e}")
@@ -774,8 +779,7 @@ class Deck:
                     end = time.monotonic() + SCEN_GRACE
                     self.scen_procs = {p: max(d, end) for p, d in self.scen_procs.items()}
             if skipped:
-                await self.toast(self.tr(f"На Linux текст набирается только латиницей — пропущено символов: {skipped}",
-                                         f"На Linux текст набирається лише латиницею — пропущено символів: {skipped}"))
+                await self.toast(self.tr("On Linux text is typed in Latin letters only — characters skipped: {0}", "На Linux текст набирається лише латиницею — пропущено символів: {0}", skipped))
             await self.broadcast(self.state_msg())
 
     # ---------- входящие ----------
@@ -785,7 +789,7 @@ class Deck:
         if fn and not rolesmod.allowed(self.role_of(ws), m.get("t"), m):
             log.info("Роль «%s»: отказ в «%s»", self.role_of(ws)["role"], m.get("t"))
             if m.get("t") not in ("viz", "eventsRead", "diag"):
-                await self.send(ws, {"t": "toast", "text": self.tr("Этому устройству так нельзя", "Цьому пристрою так не можна")})
+                await self.send(ws, {"t": "toast", "text": self.tr("This device isn't allowed to do that", "Цьому пристрою так не можна")})
             return
         if fn:
             t0 = time.perf_counter()
@@ -845,12 +849,12 @@ class Deck:
     async def msg_browse(self, ws, m):
         mode = m.get("mode")
         if self.store.exists(mode):
-            await self.toast(self.tr("Открыл окно выбора файла на ПК", "Відкрив вікно вибору файлу на ПК"))
+            await self.toast(self.tr("Opened a file picker on the PC", "Відкрив вікно вибору файлу на ПК"))
             try:
                 item = await asyncio.get_running_loop().run_in_executor(None, apps.pick_exe)
             except Exception as e:
                 log.exception("Окно выбора файла")
-                await self.toast(self.tr("Не открылось окно выбора: ", "Не відкрилося вікно вибору: ") + str(e))
+                await self.toast(self.tr("The file picker didn't open: ", "Не відкрилося вікно вибору: ") + str(e))
                 item = None
             if item:
                 new_item = app_item(item)
@@ -862,7 +866,7 @@ class Deck:
                     lay.append(new_item)
                 self.store.save()
                 await self.broadcast(self.config_msg())
-                await self.toast(self.tr("Добавлено: ", "Додано: ") + item["label"])
+                await self.toast(self.tr("Added: ", "Додано: ") + item["label"])
 
     async def msg_cfg(self, ws, m):
         cfg = self.clean_cfg(m.get("cfg"))
@@ -873,14 +877,7 @@ class Deck:
             self.mode = self.base
             await self.broadcast(self.state_msg())
         if "lang" in cfg:
-            i18n.set_lang(self.store.cfg.get("lang"))   # лог, окна выбора файлов и ярлык в меню — тоже
-            if self.tray and hasattr(self.tray, "lang_changed"):
-                self.tray.lang_changed()
-            if hasattr(tray_mod(), "menu_entry"):
-                await asyncio.get_running_loop().run_in_executor(None, tray_mod().menu_entry)
-            await self.updater.push()          # тексты обновлений — на новом языке
-        if "lang" in cfg:
-            await self.plugins.push()             # названия и кнопки плагинов — на новом языке
+            await self.lang_changed()
         if self.pad and any(k.startswith("pad") for k in cfg):
             self.pad.config_changed()
         if cfg.get("viz") is False:
@@ -903,7 +900,7 @@ class Deck:
 
     async def msg_modeAdd(self, ws, m):
         # свой режим из «Правки» на главном экране
-        name = " ".join(str(m.get("name") or "").split())[:24] or self.tr("Новый режим", "Новий режим")
+        name = " ".join(str(m.get("name") or "").split())[:24] or self.tr("New mode", "Новий режим")
         icon, color = str(m.get("icon") or ""), str(m.get("color") or "")
         mid = self.store.add_mode(name, icon if re.fullmatch(r"[a-z]{1,16}", icon) else "star",
                                   color if re.fullmatch(r"#[0-9A-Fa-f]{6}", color) else None)
@@ -911,7 +908,7 @@ class Deck:
             self.store.set_grid(mid, m.get("cols"), m.get("rows"))
         log.info("Новый режим «%s» (%s)", name, mid)
         await self.broadcast(self.config_msg())
-        await self.toast(self.tr("Новый режим: ", "Новий режим: ") + name)
+        await self.toast(self.tr("New mode: ", "Новий режим: ") + name)
 
     async def msg_modeDel(self, ws, m):
         mode = m.get("id")
@@ -924,7 +921,7 @@ class Deck:
                 self.mode = None
                 await self.broadcast(self.state_msg())
             await self.broadcast(self.config_msg())
-            await self.toast(self.tr("Удалён режим: ", "Видалено режим: ") + name)
+            await self.toast(self.tr("Mode deleted: ", "Видалено режим: ") + name)
 
     async def msg_modeOrder(self, ws, m):
         self.store.set_order(m.get("ids"))
@@ -938,7 +935,7 @@ class Deck:
 
     async def msg_scriptTest(self, ws, m):
         # «Проверить» в редакторе: один прогон, повторное нажатие — стоп
-        await self.toggle_script("__test__", self.tr("Проверка", "Перевірка"), {"script": str(m.get("text") or "")}, times=1)
+        await self.toggle_script("__test__", self.tr("Test", "Перевірка"), {"script": str(m.get("text") or "")}, times=1)
 
     # ---------- обновления с GitHub (update.py) ----------
     async def msg_updCheck(self, ws, m):
@@ -995,8 +992,8 @@ class Deck:
             if ok:
                 self.clip_seq = await asyncio.get_running_loop().run_in_executor(None, clip.seq)   # своё — не ловить обратно
                 await self.clip_add("phone", text)
-            await self.toast(self.tr("Скопировано на ПК", "Скопійовано на ПК") if ok else
-                             self.tr("Не вышло записать в буфер ПК", "Не вийшло записати в буфер ПК"))
+            await self.toast(self.tr("Copied on the PC", "Скопійовано на ПК") if ok else
+                             self.tr("Couldn't write to the PC clipboard", "Не вийшло записати в буфер ПК"))
 
     async def msg_clipGet(self, ws, m):
         await self.send(ws, {"t": "clip", "items": self.clip_items})
@@ -1005,7 +1002,7 @@ class Deck:
         url = str(m.get("url") or "")
         if re.fullmatch(r"https?://\S{1,2000}", url):
             await asyncio.get_running_loop().run_in_executor(None, apps.launch, {"label": url, "path": url})
-            await self.toast(self.tr("Открыл на ПК", "Відкрив на ПК"))
+            await self.toast(self.tr("Opened on the PC", "Відкрив на ПК"))
 
     async def msg_devices(self, ws, m):
         snap = await asyncio.get_running_loop().run_in_executor(None, devices.snapshot)
@@ -1050,7 +1047,7 @@ class Deck:
         it = await self.find_app(str(m.get("name") or ""))
         if it:
             await self.open_app(it, apps.running_procs())
-            await self.toast(self.tr("Запуск: ", "Запуск: ") + it["label"])
+            await self.toast(self.tr("Launch: ", "Запуск: ") + it["label"])
 
     async def msg_diag(self, ws, m):
         (self.diag_subs.add if m.get("on") else self.diag_subs.discard)(ws)
@@ -1066,23 +1063,23 @@ class Deck:
             self.pad.meter(bool(m.get("on")))
 
     async def msg_padAdd(self, ws, m):
-        await self.toast(self.tr("Открыл на ПК окно выбора звуков", "Відкрив на ПК вікно вибору звуків"))
+        await self.toast(self.tr("Opened the sound picker on the PC", "Відкрив на ПК вікно вибору звуків"))
         try:
             added = await asyncio.get_running_loop().run_in_executor(None, padmod.pick_files)
         except Exception as e:
             log.exception("Выбор звуков")
-            await self.toast(self.tr("Не открылось окно выбора: ", "Не відкрилося вікно вибору: ") + str(e))
+            await self.toast(self.tr("The file picker didn't open: ", "Не відкрилося вікно вибору: ") + str(e))
             added = []
         if added and self.pad:
             self.pad.scan()
-            await self.toast(self.tr("Добавлено: ", "Додано: ") + ", ".join(added[:5]) + (" …" if len(added) > 5 else ""))
+            await self.toast(self.tr("Added: ", "Додано: ") + ", ".join(added[:5]) + (" …" if len(added) > 5 else ""))
 
     async def msg_padFolder(self, ws, m):
         try:
             await asyncio.get_running_loop().run_in_executor(None, padmod.open_folder)
-            await self.toast(self.tr("Открыл папку звуков на ПК", "Відкрив папку звуків на ПК"))
+            await self.toast(self.tr("Opened the sounds folder on the PC", "Відкрив папку звуків на ПК"))
         except Exception as e:
-            await self.toast(self.tr("Не открылась папка: ", "Не відкрилася папка: ") + str(e))
+            await self.toast(self.tr("The folder didn't open: ", "Не відкрилася папка: ") + str(e))
 
     async def msg_plugin(self, ws, m):                                      # кнопка / переключатель / ползунок плагина
         try:
@@ -1097,7 +1094,7 @@ class Deck:
         g = m.get("grant")                                   # согласие на разрешения (список, что видел пользователь)
         g = [str(x) for x in g][:20] if isinstance(g, list) else None
         if not await self.plugins.set_on(str(m.get("id")), bool(m.get("on")), grant=g) and m.get("on"):
-            await self.toast(self.tr("Плагину нужны разрешения — включи его на странице «Плагины»",
+            await self.toast(self.tr("The plugin needs permissions — turn it on in the «Plugins» page",
                                      "Плагіну потрібні дозволи — увімкни його на сторінці «Плагіни»"))
 
     async def msg_pluginHalt(self, ws, m):                                  # «Остановить» зависший плагин
@@ -1109,7 +1106,7 @@ class Deck:
     async def msg_pluginDelete(self, ws, m):
         """«Удалить» на странице «Плагины» — насовсем (файлы плагина и его прежние версии из каталога)."""
         if await self.plugins.remove(str(m.get("id") or "")):
-            await self.send(ws, {"t": "toast", "text": self.tr("Плагин удалён", "Плагін видалено")})
+            await self.send(ws, {"t": "toast", "text": self.tr("Plugin deleted", "Плагін видалено")})
 
     # ---------- моды дека ----------
     async def mods_scan(self):
@@ -1131,7 +1128,7 @@ class Deck:
                 m.get("layout"))
         except (ValueError, OSError) as e:
             log.warning("Редактор вида: %s", e)
-            await self.send(ws, {"t": "toast", "text": self.tr("Вид не сохранился: ", "Вигляд не зберігся: ") + str(e)})
+            await self.send(ws, {"t": "toast", "text": self.tr("The look wasn't saved: ", "Вигляд не зберігся: ") + str(e)})
             return
         await asyncio.get_running_loop().run_in_executor(None, self.mods.scan)
         for other in self.mods.looks():
@@ -1162,13 +1159,13 @@ class Deck:
             await asyncio.get_running_loop().run_in_executor(None, wipe)
         except OSError as e:
             log.warning("Мод «%s»: не удалось удалить: %s", mid, e)
-            await self.send(ws, {"t": "toast", "text": self.tr("Мод не удалился: ", "Мод не видалився: ") + str(e)})
+            await self.send(ws, {"t": "toast", "text": self.tr("The mod wasn't deleted: ", "Мод не видалився: ") + str(e)})
             return
         self.store.cfg.get("mods", {}).pop(mid, None)
         self.store.save()
         log.info("Мод «%s» удалён", mid)
         await self.mods_scan()
-        await self.send(ws, {"t": "toast", "text": self.tr("Мод удалён", "Мод видалено")})
+        await self.send(ws, {"t": "toast", "text": self.tr("Mod deleted", "Мод видалено")})
 
     async def sort_folders(self):
         moved = await asyncio.get_running_loop().run_in_executor(None, modsmod.sort_folders, PLUGINS, MODS)
@@ -1184,9 +1181,9 @@ class Deck:
         try:
             MODS.mkdir(exist_ok=True)
             await asyncio.get_running_loop().run_in_executor(None, padmod.open_folder, MODS)
-            await self.toast(self.tr("Открыл папку модов на ПК", "Відкрив теку модів на ПК"))
+            await self.toast(self.tr("Opened the mods folder on the PC", "Відкрив теку модів на ПК"))
         except Exception as e:
-            await self.toast(self.tr("Не открылась папка: ", "Не відкрилася тека: ") + str(e))
+            await self.toast(self.tr("The folder didn't open: ", "Не відкрилася тека: ") + str(e))
 
     async def msg_catalog(self, ws, m):
         """Страница «Каталог»: открыли — свежий список (проверка, если давно не смотрели или просят)."""
@@ -1205,18 +1202,103 @@ class Deck:
         if res:
             await self.send(ws, {"t": "toast", "text": self.cat_error(res)})
 
+    # ---------- языки (страница «Мови») ----------
+    def langs_msg(self):
+        cat = getattr(self.catalog, "langs", {}) or {}
+        return {"t": "langs", "cur": i18n.LANG, "names": i18n.NAMES, "builtin": list(i18n.BUILTIN),
+                "installed": self.langs.installed(), "catalog": {c: {"version": m["version"]} for c, m in cat.items()},
+                "busy": self.lang_busy, "error": self.catalog.error if not cat else ""}
+
+    async def lang_changed(self):
+        """Язык сменился: сервер, трей, ярлык, обновления, плагины и телефоны — на новом."""
+        i18n.set_lang(self.store.cfg.get("lang"), ROOT)
+        try:                                         # трей и ярлык — по возможности, язык меняется в любом случае
+            if self.tray and hasattr(self.tray, "lang_changed"):
+                self.tray.lang_changed()
+            if hasattr(tray_mod(), "menu_entry"):
+                await asyncio.get_running_loop().run_in_executor(None, tray_mod().menu_entry)
+        except Exception as e:
+            log.warning("Трей / ярлык на новом языке: %s", e)
+        await self.updater.push()
+        await self.plugins.push()
+        await self.broadcast(self.langs_msg())
+
+    async def msg_langs(self, ws, m):
+        """Страница «Мови»: открыли — что есть в каталоге (проверка, если давно не смотрели или просят)."""
+        if m.get("check") or not getattr(self.catalog, "langs", None) or time.time() - self.catalog.checked > 600:
+            await self.catalog.check()
+        await self.send(ws, self.langs_msg())
+
+    async def msg_langSet(self, ws, m):
+        """Тап по языку: есть — сразу; нет — скачать из каталога (тот же коммит, сверка SHA-256) и включить."""
+        code = str(m.get("code") or "")
+        if code not in i18n.NAMES or self.lang_busy:
+            return
+        if code not in i18n.BUILTIN and code not in self.langs.installed():
+            if not getattr(self.catalog, "langs", None):
+                await self.catalog.check()
+            entry = (getattr(self.catalog, "langs", None) or {}).get(code)
+            if not entry:
+                await self.send(ws, {"t": "toast", "text": self.cat_error(self.catalog.error or "none")})
+                return
+            self.lang_busy = code
+            await self.broadcast(self.langs_msg())
+            token, sha = self.catalog.token(), self.catalog.sha
+
+            def fetch():
+                data = catmod.updmod.raw(f"catalog/langs/{code}.json", sha, token, langsmod.MAX_PACK)
+                self.langs.save(code, data, entry["sha256"])
+            try:
+                await asyncio.get_running_loop().run_in_executor(None, fetch)
+            except catmod.updmod.UpdateError as e:
+                self.lang_busy = ""
+                await self.broadcast(self.langs_msg())
+                await self.send(ws, {"t": "toast", "text": self.cat_error(e.code)})
+                return
+            except (OSError, ValueError) as e:
+                self.lang_busy = ""
+                log.warning("Language pack %s: %s", code, e)
+                await self.broadcast(self.langs_msg())
+                await self.send(ws, {"t": "toast", "text": self.cat_error("bad")})
+                return
+            self.lang_busy = ""
+        self.store.cfg["lang"] = code
+        self.store.save()
+        await self.lang_changed()
+        await self.broadcast(self.config_msg())
+
+    async def msg_langDelete(self, ws, m):
+        """Удержание на языке → «Удалить»: файл пакета прочь; был выбран — назад на английский."""
+        code = str(m.get("code") or "")
+        if code in i18n.BUILTIN or code not in i18n.NAMES:
+            return
+        if self.store.cfg.get("lang") == code:
+            self.store.cfg["lang"] = "en"
+            self.store.save()
+        await asyncio.get_running_loop().run_in_executor(None, self.langs.delete, code)
+        await self.lang_changed()
+        await self.broadcast(self.config_msg())
+
+    async def lang_file(self, request):
+        """Строки пакета для телефона — только своим."""
+        self.allowed(request)
+        f = self.langs.file(request.match_info["code"].removesuffix(".json"))
+        if not f:
+            raise web.HTTPNotFound()
+        return web.FileResponse(f, headers={"Cache-Control": "no-cache"})
+
     def cat_error(self, code):
-        return {"busy": self.tr("Каталог занят — подожди, пока закончит", "Каталог зайнятий — зачекай, поки закінчить"),
-                "none": self.tr("Нет такого плагина или копии", "Немає такого плагіна чи копії"),
-                "api_new": self.tr("Плагину нужна новая версия дека — сначала обнови дек", "Плагіну потрібна нова версія дека — спершу онови дек"),
-                "api_old": self.tr("Плагин для старой версии дека", "Плагін для старої версії дека"),
-                "os": self.tr("Плагин не для этой ОС", "Плагін не для цієї ОС"),
-                "bad": self.tr("Файлы плагина не сошлись с каталогом — попробуй позже", "Файли плагіна не зійшлися з каталогом — спробуй пізніше"),
-                "token": self.tr("GitHub не пустил: проверь токен в настройках обновления", "GitHub не пустив: перевір токен у налаштуваннях оновлення"),
-                "private": self.tr("Репозиторий закрыт: нужен токен (настройки → обновление)", "Репозиторій закритий: потрібен токен (налаштування → оновлення)"),
-                "rate": self.tr("GitHub просит подождать (лимит запросов)", "GitHub просить зачекати (ліміт запитів)"),
-                "net": self.tr("Нет связи с GitHub", "Немає зв’язку з GitHub"),
-                }.get(code, self.tr("Не получилось — смотри лог", "Не вийшло — дивись лог"))
+        return {"busy": self.tr("The catalog is busy — wait until it finishes", "Каталог зайнятий — зачекай, поки закінчить"),
+                "none": self.tr("No such plugin or backup", "Немає такого плагіна чи копії"),
+                "api_new": self.tr("The plugin needs a newer deck — update the deck first", "Плагіну потрібна нова версія дека — спершу онови дек"),
+                "api_old": self.tr("Plugin for an older deck", "Плагін для старої версії дека"),
+                "os": self.tr("The plugin isn't for this OS", "Плагін не для цієї ОС"),
+                "bad": self.tr("The plugin files don't match the catalog — try later", "Файли плагіна не зійшлися з каталогом — спробуй пізніше"),
+                "token": self.tr("GitHub refused: check the token in the update settings", "GitHub не пустив: перевір токен у налаштуваннях оновлення"),
+                "private": self.tr("The repository is private: a token is needed (settings → updates)", "Репозиторій закритий: потрібен токен (налаштування → оновлення)"),
+                "rate": self.tr("GitHub asks to wait (rate limit)", "GitHub просить зачекати (ліміт запитів)"),
+                "net": self.tr("No connection to GitHub", "Немає зв’язку з GitHub"),
+                }.get(code, self.tr("Didn't work — see the log", "Не вийшло — дивись лог"))
 
     async def msg_healthReport(self, ws, m):
         """Отчёт для разработчика: zip в logs/reports (состояние, конец логов, конфиг без секретов)."""
@@ -1228,7 +1310,7 @@ class Deck:
             if m.get("open"):
                 await asyncio.get_running_loop().run_in_executor(None, padmod.open_folder, path.parent)
         except Exception as e:
-            await self.toast(self.tr("Отчёт не собрался: ", "Звіт не зібрався: ") + str(e))
+            await self.toast(self.tr("The report wasn't collected: ", "Звіт не зібрався: ") + str(e))
 
     async def msg_pluginsOn(self, ws, m):
         await self.plugins.set_master(bool(m.get("on")))
@@ -1237,15 +1319,15 @@ class Deck:
         if any(t for _, t in await self.sort_folders()):
             await self.mods_scan()
         await self.plugins.scan(force=True)
-        await self.toast(self.tr("Плагины перечитаны", "Плагіни перечитано"))
+        await self.toast(self.tr("Plugins rescanned", "Плагіни перечитано"))
 
     async def msg_pluginsFolder(self, ws, m):
         try:
             PLUGINS.mkdir(exist_ok=True)
             await asyncio.get_running_loop().run_in_executor(None, padmod.open_folder, PLUGINS)
-            await self.toast(self.tr("Открыл папку плагинов на ПК", "Відкрив теку плагінів на ПК"))
+            await self.toast(self.tr("Opened the plugins folder on the PC", "Відкрив теку плагінів на ПК"))
         except Exception as e:
-            await self.toast(self.tr("Не открылась папка: ", "Не відкрилася тека: ") + str(e))
+            await self.toast(self.tr("The folder didn't open: ", "Не відкрилася тека: ") + str(e))
 
     async def msg_media(self, ws, m):
         if self.media:
@@ -1260,9 +1342,9 @@ class Deck:
         old = self.vol_timers.pop(target, None)
         if old:
             old.cancel()
-        name = self.tr("общая", "загальна") if target == "__master__" else target
+        name = self.tr("master", "загальна") if target == "__master__" else target
         self.vol_timers[target] = asyncio.get_running_loop().call_later(1.5, lambda: asyncio.ensure_future(self.event(
-            "audio", self.tr(f"Громкость ({name}): {round(value)}%", f"Гучність ({name}): {round(value)}%"),
+            "audio", self.tr("Volume ({0}): {1}%", "Гучність ({0}): {1}%", name, round(value)),
             redo={"t": "vol", "target": target, "value": value})))
 
     async def msg_out(self, ws, m):
@@ -1271,7 +1353,7 @@ class Deck:
             await self.poll_audio()
         except Exception as e:
             log.exception("Смена выхода")
-            await self.toast(self.tr("Не удалось сменить выход: ", "Не вдалося змінити вихід: ") + str(e))
+            await self.toast(self.tr("Couldn't change the output: ", "Не вдалося змінити вихід: ") + str(e))
 
     async def msg_listApps(self, ws, m):
         lst = await apps.list_installed(refresh=bool(m.get("refresh")))
@@ -1313,9 +1395,9 @@ class Deck:
         """Новая раскладка (плитка в режим) или «Запомнить заново» (id есть): окна с телефона, имя."""
         lays = list(self.store.cfg.get("winLayouts") or [])
         lid = str(m.get("id") or "") or "w" + format(int(time.time() * 1000) % (36 ** 6), "x")
-        new = self.clean_layouts([{"id": lid, "name": str(m.get("name") or self.tr("Раскладка", "Розкладка")), "wins": m.get("wins")}])
+        new = self.clean_layouts([{"id": lid, "name": str(m.get("name") or self.tr("Layout", "Розкладка")), "wins": m.get("wins")}])
         if not new or not new[0]["wins"]:
-            await self.toast(self.tr("Не выбрано ни одного окна", "Не вибрано жодного вікна"))
+            await self.toast(self.tr("No window selected", "Не вибрано жодного вікна"))
             return
         old = next((i for i, L in enumerate(lays) if L["id"] == lid), None)
         if old is None:
@@ -1329,14 +1411,13 @@ class Deck:
         self.store.cfg["winLayouts"] = lays
         self.store.save()
         await self.broadcast(self.config_msg())
-        await self.toast(self.tr(f"Раскладка «{new[0]['name']}»: окон {len(new[0]['wins'])}",
-                                 f"Розкладка «{new[0]['name']}»: вікон {len(new[0]['wins'])}"))
+        await self.toast(self.tr("Layout «{0}»: {1} windows", "Розкладка «{0}»: вікон {1}", new[0]['name'], len(new[0]['wins'])))
 
     async def restore_layout(self, lid, label):
         """Расставить окна: запущенные — на место (свёрнутые развернуть), не запущенные — запустить и дождаться окна."""
         L = next((x for x in self.store.cfg.get("winLayouts") or [] if x["id"] == lid), None)
         if not L:
-            await self.toast(self.tr(f"«{label}»: раскладка не найдена", f"«{label}»: розкладку не знайдено"))
+            await self.toast(self.tr("«{0}»: layout not found", "«{0}»: розкладку не знайдено", label))
             return
         loop = asyncio.get_running_loop()
         running = apps.running_procs()
@@ -1350,13 +1431,13 @@ class Deck:
                 waiting.append(args)
             else:
                 missing.append(w["label"])
-        await self.toast(self.tr(f"«{L['name']}»: окон на месте {placed}", f"«{L['name']}»: вікон на місці {placed}")
-                         + (self.tr(f", запускаю {len(waiting)}", f", запускаю {len(waiting)}") if waiting else ""))
+        await self.toast(self.tr("«{0}»: windows in place {1}", "«{0}»: вікон на місці {1}", L['name'], placed)
+                         + (self.tr(", launching {0}", ", запускаю {0}", len(waiting)) if waiting else ""))
         end = time.monotonic() + 15
         while waiting and time.monotonic() < end:
             await asyncio.sleep(0.7)
             waiting = [a for a in waiting if not await loop.run_in_executor(None, apps.place_window, *a)]
-        await self.event("app", self.tr(f"Раскладка «{L['name']}»", f"Розкладка «{L['name']}»"),
+        await self.event("app", self.tr("Layout «{0}»", "Розкладка «{0}»", L['name']),
                          redo={"t": "wl", "id": lid})
 
     async def track_running(self, procs):
@@ -1365,10 +1446,10 @@ class Deck:
         prev = self.seen.get("procs")
         if prev is not None:
             for p_ in sorted(set(procs) - prev):
-                await self.event("app", self.tr("Запущена: ", "Запущено: ") + str(labels.get(p_, p_)),
+                await self.event("app", self.tr("Started: ", "Запущено: ") + str(labels.get(p_, p_)),
                                  redo={"t": "run", "name": labels.get(p_, p_)})
             for p_ in sorted(prev - set(procs)):
-                await self.event("app", self.tr("Закрыта: ", "Закрито: ") + str(labels.get(p_, p_)))
+                await self.event("app", self.tr("Closed: ", "Закрито: ") + str(labels.get(p_, p_)))
         self.seen["procs"] = set(procs)
 
     async def diag_loop(self):
@@ -1407,15 +1488,15 @@ class Deck:
             if out != self.out_dev:
                 if self.out_dev is not None:
                     self.viz.restart()
-                    await self.event("audio", self.tr("Выход звука: ", "Вихід звуку: ") + str(names.get(out) or out),
+                    await self.event("audio", self.tr("Sound output: ", "Вихід звуку: ") + str(names.get(out) or out),
                                      redo={"t": "out", "id": out})
                 self.out_dev = out
             before = self.seen.get("devs")
             if before is not None and snap.get("available"):
                 for i in before.keys() - names.keys():
-                    await self.event("device", self.tr("Отключилось: ", "Відключилося: ") + str(before[i]), level="warn", notify=True)
+                    await self.event("device", self.tr("Disconnected: ", "Відключилося: ") + str(before[i]), level="warn", notify=True)
                 for i in names.keys() - before.keys():
-                    await self.event("device", self.tr("Подключилось: ", "Підключилося: ") + str(names[i]), notify=True)
+                    await self.event("device", self.tr("Connected: ", "Підключилося: ") + str(names[i]), notify=True)
             if snap.get("available"):
                 self.seen["devs"] = names
             msg = dict(snap, t="audio")
@@ -1519,12 +1600,13 @@ class Deck:
         await self.send(ws, self.config_msg())
         await self.send(ws, self.pc_msg(request))
         await self.send(ws, self.state_msg())
+        await self.send(ws, self.langs_msg())
         for k in ("stats", "audio", "media", "running", "plugins", "mods", "catalog", "padList", "padState", "upd"):
             if k in self.last:
                 await self.send(ws, self.last[k])
         await self.updater.on_client(ws)
         await self.send(ws, self.events.msg())
-        await self.event("phone", self.tr("Подключился телефон ", "Підключився телефон ") + str(request.remote), notify=True)
+        await self.event("phone", self.tr("Phone connected ", "Підключився телефон ") + str(request.remote), notify=True)
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
@@ -1551,7 +1633,7 @@ class Deck:
             self.who.pop(ws, None)
             self.errs.pop(ws, None)
             log.info("Клиент отключился %s", request.remote)
-            await self.event("phone", self.tr("Отключился телефон ", "Відключився телефон ") + str(request.remote), notify=True)
+            await self.event("phone", self.tr("Phone disconnected ", "Відключився телефон ") + str(request.remote), notify=True)
         return ws
 
     # ---------- свои устройства ----------
@@ -1577,7 +1659,7 @@ class Deck:
         """Код подключения — туда, где его увидит хозяин: уведомление на ПК и подсказка на своих телефонах."""
         if not force and not self.pair.may_show():
             return
-        text = self.tr("Новое устройство просит доступ к деку. Код: ", "Новий пристрій просить доступ до дека. Код: ") + self.pair.current()
+        text = self.tr("A new device asks for access to the deck. Code: ", "Новий пристрій просить доступ до дека. Код: ") + self.pair.current()
         if self.tray:
             self.tray.notify(text)
         await self.broadcast({"t": "toast", "text": text, "force": True, "ms": 20000, "mainOnly": True}, remember=False)
@@ -1615,7 +1697,7 @@ class Deck:
                 res = self.pair.enter(m.get("code"))
                 if res == "ok":
                     pid = await self.admit(ws, request)
-                    await self.event("phone", self.tr("Новое своё устройство: ", "Новий свій пристрій: ")
+                    await self.event("phone", self.tr("New own device: ", "Новий свій пристрій: ")
                                      + f"{self.pair.phones[pid]['name']} ({ip})", notify=True)
                     return pid
                 log.warning("Устройство %s: неверный код подключения", ip)
@@ -1731,7 +1813,7 @@ class Deck:
 
     async def apk(self, request):
         if not APK.exists():
-            return web.Response(status=404, text="APK нет на ПК")
+            return web.Response(status=404, text="No APK on the PC")
         return web.FileResponse(APK, headers={
             "Content-Type": "application/vnd.android.package-archive",
             "Content-Disposition": 'attachment; filename="Noryx.apk"'})
@@ -1967,16 +2049,17 @@ async def serve(restart=False, quiet=False):
     app.router.add_get("/mod/{mid}/{rel:.+}", deck.mod_file)
     app.router.add_get("/stream/{pid}", deck.plugin_stream)
     app.router.add_get("/report/{name}", deck.report_file)
+    app.router.add_get("/lang/{code}", deck.lang_file)
 
     async def quit_handler(request):
         if request.remote not in ("127.0.0.1", "::1"):
             return web.Response(status=403)
         loop.call_soon(stop.set)
-        return web.Response(text="Noryx остановлен")
+        return web.Response(text="Noryx stopped")
     app.router.add_get("/quit", quit_handler)
     app.router.add_static("/static/", CLIENT, show_index=False)
     app.on_startup.append(deck.on_startup)
-    log.info("Noryx %s запускается…%s", version_text(), i18n.tr(" (перезапуск)", " (перезапуск)") if restart else "")
+    log.info("Noryx %s запускается…%s", version_text(), i18n.tr(" (restart)", " (перезапуск)") if restart else "")
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, host="0.0.0.0", port=PORT)

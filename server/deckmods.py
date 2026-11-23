@@ -34,10 +34,25 @@ MAX_FILES, MAX_SIZE = 200, 16 * 1024 * 1024
 CSS_MAX, IMG_MAX = 64 * 1024, 4 * 1024 * 1024        # редактор вида: style.css и фон
 
 
-def text(v, lang):
+def text(v, lang, mid=""):
+    """Название / описание мода: строка или {"en": …, "uk": …} (старые — {"ru", "uk"}); на языке дека — i18n.ptext
+    (свой текст, перевод из мовного пакета, английский)."""
+    if lang == i18n.LANG:
+        return i18n.ptext(mid, v)[:200]
     if isinstance(v, dict):
-        return str(v.get(lang) or v.get("ru") or next(iter(v.values()), ""))[:200]
+        return str(v.get(lang) or v.get("en") or v.get("ru") or next(iter(v.values()), ""))[:200]
     return str(v or "")[:200]
+
+
+def clean_title(v):
+    """Заголовок панели компоновки: строка или {"en": …, "uk": …, "<код>": …} (страница берёт язык дека — lyNm)."""
+    if isinstance(v, dict):
+        return {k: str(x)[:40] for k, x in v.items() if k in i18n.NAMES and isinstance(x, str) and x} or ""
+    return str(v or "")[:40]
+
+
+def mod_langs(v):
+    return [x for x in dict.fromkeys(v if isinstance(v, list) else []) if isinstance(x, str) and x in i18n.NAMES][:10]
 
 
 def clean_vars(v):
@@ -75,10 +90,12 @@ def clean_layout(v):
         for k, val in (p.get("opts") or {}).items() if isinstance(p.get("opts"), dict) else ():
             if isinstance(k, str) and len(k) <= 30 and (isinstance(val, (bool, int, float)) or (isinstance(val, str) and len(val) <= 300)):
                 opts[k] = val
+            elif k == "text" and isinstance(val, dict):        # текст панели на разных языках {"en": …, "uk": …}
+                opts[k] = {c: x[:300] for c, x in val.items() if c in i18n.NAMES and isinstance(x, str)}
             if len(opts) >= 30:
                 break
         out["panels"].append({"id": pid, "kind": p["kind"], "x": x, "y": y, "w": num(p.get("w"), 1, cols - x, 2),
-                              "h": num(p.get("h"), 1, rows - y, 2), "title": str(p.get("title") or "")[:40], "opts": opts})
+                              "h": num(p.get("h"), 1, rows - y, 2), "title": clean_title(p.get("title")), "opts": opts})
         if len(out["panels"]) >= 40:
             break
     return out
@@ -111,7 +128,8 @@ class Mods:
         return self.deck.store.cfg.setdefault("mods", {})
 
     def lang(self):
-        return self.deck.store.cfg.get("lang") or "ru"
+        i18n.follow(self.deck.store.cfg.get("lang"))
+        return i18n.LANG
 
     # ---------- поиск ----------
     def read(self, mid, d):
@@ -119,7 +137,7 @@ class Mods:
         try:
             files = sorted(p for p in d.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
             if len(files) > MAX_FILES or sum(p.stat().st_size for p in files) > MAX_SIZE:
-                raise ValueError(i18n.tr("слишком большой", "завеликий"))
+                raise ValueError(i18n.tr("too large", "завеликий"))
             h = hashlib.sha256()
             for p in files:
                 h.update(p.relative_to(d).as_posix().encode("utf-8") + b"\0")
@@ -127,7 +145,7 @@ class Mods:
             m.hash = h.hexdigest()[:16]
             meta = json.loads((d / "mod.json").read_text(encoding="utf-8-sig"))
             if not isinstance(meta, dict):
-                raise ValueError(i18n.tr("mod.json — не объект", "mod.json — не об’єкт"))
+                raise ValueError(i18n.tr("mod.json is not an object", "mod.json — не об’єкт"))
             m.meta = meta
             m.version = str(meta.get("version") or "")[:20]
             m.author = str(meta.get("author") or "")[:60]
@@ -138,9 +156,9 @@ class Mods:
                 if isinstance(rel, str) and safe_rel(rel) and (d / rel).is_file() and (d / rel).suffix == "." + kind:
                     setattr(m, kind, rel)
                 elif meta.get(kind):
-                    raise ValueError(f"{kind}: " + i18n.tr("нет файла ", "немає файлу ") + str(rel)[:60])
+                    raise ValueError(f"{kind}: " + i18n.tr("no file ", "немає файлу ") + str(rel)[:60])
             if not (m.vars or m.css or m.js or (m.layout and m.layout["panels"])):
-                raise ValueError(i18n.tr("ни vars, ни css, ни js, ни layout", "ні vars, ні css, ні js, ні layout"))
+                raise ValueError(i18n.tr("no vars, css, js or layout", "ні vars, ні css, ні js, ні layout"))
         except (OSError, ValueError) as e:
             m.error = f"{type(e).__name__}: {e}" if not isinstance(e, ValueError) else str(e)
             log.warning("Мод «%s»: %s", mid, m.error)
@@ -181,7 +199,7 @@ class Mods:
             return False
         self.state[mid] = {"on": bool(on), "hash": m.hash}
         self.deck.store.save()
-        log.info("Мод «%s»: %s", mid, i18n.tr("включён", "увімкнено") if on else i18n.tr("выключен", "вимкнено"))
+        log.info("Мод «%s»: %s", mid, i18n.tr("on", "увімкнено") if on else i18n.tr("off", "вимкнено"))
         return True
 
     # ---------- редактор вида (Настройки → «Моды» → «Новый вид»): мод собирается с телефона ----------
@@ -216,7 +234,7 @@ class Mods:
         except (IndexError, ValueError):
             ver = "1.0.0"
         meta = {"name": str(name or "").strip()[:60] or mid, "version": ver,
-                "about": old.get("about") or {"ru": "Вид из редактора дека", "uk": "Вигляд з редактора дека"},
+                "about": old.get("about") or {"en": "Look from the deck editor", "uk": "Вигляд з редактора дека"},
                 "author": old.get("author") or "Noryx", "look": look if isinstance(look, dict) else {}, "css": "style.css"}
         lay = clean_layout(layout)
         if lay and lay["panels"]:
@@ -242,11 +260,18 @@ class Mods:
         return [mid for mid, m in self.items.items() if isinstance(m.meta.get("look"), dict)]
 
     # ---------- телефону ----------
+    @staticmethod
+    def langs_of(mid, v):
+        """Языки мода ("langs" в mod.json) и говорит ли он на языке дека (i18n.speaks)."""
+        L = mod_langs(v)
+        return {"langs": L, "langOk": i18n.speaks(mid, L)}
+
     def msg(self):
         lang, pend = self.lang(), set(self.pending())
         out = []
         for mid, m in sorted(self.items.items()):
-            out.append({"id": mid, "name": text(m.meta.get("name"), lang) or mid, "about": text(m.meta.get("about"), lang),
+            out.append({"id": mid, "name": text(m.meta.get("name"), lang, mid) or mid, "about": text(m.meta.get("about"), lang, mid),
+                        **self.langs_of(mid, m.meta.get("langs")),
                         "version": m.version, "author": m.author, "vars": m.vars, "css": m.css, "js": m.js, "hash": m.hash,
                         "on": self.on(mid), "pending": mid in pend, "error": m.error,
                         "look": m.meta.get("look") if isinstance(m.meta.get("look"), dict) else None, "layout": m.layout,

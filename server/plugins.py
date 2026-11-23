@@ -49,11 +49,23 @@ def plugin_id(name):
     return pid if ID_RE.fullmatch(pid or "") else None
 
 
-def text_of(v, lang):
-    """Название и описание плагина: строка или {"ru": …, "uk": …}."""
-    if isinstance(v, dict):
-        return str(v.get(lang) or v.get("ru") or v.get("uk") or next(iter(v.values()), ""))
-    return "" if v is None else str(v)
+def text_of(v, lang=None, pid=""):
+    """Название и описание плагина: строка или {"en": …, "uk": …} (старые — {"ru", "uk"}) на языке дека (i18n.ptext:
+    свой текст плагина, потом перевод из мовного пакета, потом английский)."""
+    if lang is not None and lang != i18n.LANG:          # явный язык (не текущий) — без пакета
+        if isinstance(v, dict):
+            return str(v.get(lang) or v.get("en") or v.get("ru") or v.get("uk") or next(iter(v.values()), ""))
+        return "" if v is None else str(v)
+    return i18n.ptext(pid, v)
+
+
+def clean_langs(v):
+    """LANGS плагина или мода: на каких языках его собственные тексты (коды i18n.NAMES), первый — основной."""
+    out = []
+    for x in v if isinstance(v, (list, tuple)) else []:
+        if isinstance(x, str) and x in i18n.NAMES and x not in out:
+            out.append(x)
+    return out
 
 
 def color(v):
@@ -109,13 +121,21 @@ def clean_shapes(items):
     return out[:40]
 
 
-def clean_mode(m, lang_text):
-    """Режим от плагина: {"name": str | {ru, uk}, "sub": …, "icon": имя значка режима, "color": "#RRGGBB"}."""
+def clean_mode(m, pid=""):
+    """Режим от плагина: {"name": str | {en, uk}, "sub": …, "icon": имя значка режима, "color": "#RRGGBB"}.
+    "en" — текст на языке дека (не украинском: свой у плагина / из пакета / английский), "uk" — украинский."""
     if not isinstance(m, dict) or not m.get("name"):
         return None
     name, sub = m["name"], m.get("sub") or ""
-    out = {"ru": lang_text(name, "ru")[:24], "uk": lang_text(name, "uk")[:24],
-           "subRu": lang_text(sub, "ru")[:80], "subUk": lang_text(sub, "uk")[:80],
+    cur = i18n.LANG
+    try:
+        i18n.LANG = "en" if cur == "uk" else cur
+        en, sen = i18n.ptext(pid, name), i18n.ptext(pid, sub)
+        i18n.LANG = "uk"
+        ua, sua = i18n.ptext(pid, name), i18n.ptext(pid, sub)
+    finally:
+        i18n.LANG = cur
+    out = {"en": en[:24], "uk": ua[:24], "subEn": sen[:80], "subUk": sua[:80],
            "icon": str(m.get("icon") or "star") if re.fullmatch(r"[a-z]{1,16}", str(m.get("icon") or "star")) else "star"}
     if color(m.get("color")) and len(m["color"]) == 7:
         out["color"] = m["color"].upper()
@@ -291,8 +311,11 @@ class Api:
     def lang(self):
         return self._host.lang()
 
-    def tr(self, ru, uk):
-        return uk if self.lang == "uk" else ru
+    def tr(self, base, uk, *args):
+        """Текст на языке дека: base — основной язык плагина (LANGS[0]; в комплекте — английский), uk — украинский,
+        другие — из мовного пакета (plugins[id]), нет — base. Значения — подстановкой: api.tr("Port {0}", "Порт {0}", p)."""
+        self.lang                                # язык из конфига — подхватить, если сменился
+        return i18n.ptr(self.id, base, uk, *args)
 
     @property
     def cfg(self):
@@ -373,6 +396,7 @@ class Loaded:
         self.error = ""
         self.stamp = None
         self.name = self.about = None
+        self.langs = []                          # LANGS: на каких языках тексты плагина (первый — основной)
         self.default_on = True
         self.version = ""                        # VERSION плагина (каталог сравнивает со своей)
         self.files = [self.path]
@@ -421,7 +445,8 @@ class Host:
 
     # ---------- вспомогательное ----------
     def lang(self):
-        return self.deck.store.cfg.get("lang") or "ru"
+        i18n.follow(self.deck.store.cfg.get("lang"))
+        return i18n.LANG
 
     def soon(self, fn):
         loop = self.deck.loop
@@ -549,7 +574,7 @@ class Host:
             vals = {}
             for n in tree.body:
                 if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name) \
-                        and n.targets[0].id in ("NAME", "ABOUT", "DEFAULT_ON", "API", "PERMS", "VERSION"):
+                        and n.targets[0].id in ("NAME", "ABOUT", "DEFAULT_ON", "API", "PERMS", "VERSION", "LANGS"):
                     try:
                         vals[n.targets[0].id] = ast.literal_eval(n.value)
                     except ValueError:
@@ -557,6 +582,7 @@ class Host:
             if not any(isinstance(n, ast.ClassDef) and n.name == "Plugin" for n in tree.body):
                 raise TypeError("нет класса Plugin")
             it.name, it.about, it.error = vals.get("NAME"), vals.get("ABOUT"), ""
+            it.langs = clean_langs(vals.get("LANGS"))
             it.default_on = vals.get("DEFAULT_ON", True)
             it.version = str(vals.get("VERSION") or "")[:20]
             it.api, it.api_state = perms.check_api(vals.get("API"))
@@ -598,6 +624,7 @@ class Host:
                 raise TypeError("нет класса Plugin")
             it.mod, it.error = mod, ""
             it.name, it.about = getattr(mod, "NAME", None), getattr(mod, "ABOUT", None)
+            it.langs = clean_langs(getattr(mod, "LANGS", None))
         except Exception as e:
             it.mod, it.error = None, f"{type(e).__name__}: {e}"
             log.warning("Плагин «%s» не загрузился: %s", it.id, it.error)
@@ -630,15 +657,14 @@ class Host:
         it.fails = [t for t in it.fails if now - t < CRASH_WINDOW] + [now]
         if len(it.fails) >= CRASH_N and not it.crashed and it.obj is not None:
             why = f"{where}: {type(e).__name__}: {e}"[:300]
-            it.crashed = i18n.tr(f"остановлен деком: {len(it.fails)} ошибок за минуту — {why}",
-                                 f"зупинений деком: {len(it.fails)} помилок за хвилину — {why}")
+            it.crashed = i18n.tr("stopped by the deck: {0} errors in a minute — {1}", "зупинений деком: {0} помилок за хвилину — {1}", len(it.fails), why)
             log.warning("Плагин «%s» падает (%d ошибок за минуту) — останавливаю: %s", it.id, len(it.fails), why)
             self.soon(lambda: asyncio.ensure_future(self._crashed(it)))
 
     async def _crashed(self, it):
         await self.unload(it.id)
         await self.push()
-        await self.deck.event("plugin", i18n.tr(f"Плагин «{it.id}» остановлен: падал", f"Плагін «{it.id}» зупинено: падав"),
+        await self.deck.event("plugin", i18n.tr("Plugin «{0}» stopped: it kept crashing", "Плагін «{0}» зупинено: падав", it.id),
                               level="error", notify=True)
 
     async def halt(self, pid):
@@ -758,7 +784,7 @@ class Host:
                 log.warning("Плагин «%s»: ui() думал %.2f с — дек ждал", it.id, dt)
             return {"dock": clean_widgets(ui.get("dock")), "settings": clean_widgets(ui.get("settings")),
                     "screen": clean_widgets(ui.get("screen")), "tiles": clean_tiles(ui.get("tiles")),
-                    "mode": clean_mode(ui.get("mode"), text_of),
+                    "mode": clean_mode(ui.get("mode"), it.id),
                     "ctx": clean_ctx(ui.get("ctx")), "theme": clean_theme(ui.get("theme")), "rev": abs(hash(it.stamp)) % 10 ** 8}
         except Exception as e:
             log.warning("Плагин «%s»: ui(): %s", it.id, e)
@@ -767,14 +793,15 @@ class Host:
 
     def msg(self):
         lang, out = self.lang(), []
-        for pid, it in sorted(self.items.items(), key=lambda x: text_of(x[1].name, "ru").lower() or x[0]):
+        for pid, it in sorted(self.items.items(), key=lambda x: text_of(x[1].name, pid=x[0]).lower() or x[0]):
             ui = self.ui_of(it)
             g = self.granted(pid)
-            out.append({"id": pid, "name": text_of(it.name, lang) or pid, "about": text_of(it.about, lang),
+            out.append({"id": pid, "name": text_of(it.name, pid=pid) or pid, "about": text_of(it.about, pid=pid),
+                        "langs": it.langs, "langOk": self.lang_ok(it),
                         "on": self.enabled(pid), "running": it.obj is not None, "version": getattr(it, "version", ""),
                         "api": it.api, "apiState": it.api_state, "apiDeck": perms.API_VERSION,
                         "perms": [{"k": k, "label": perms.label(k, lang), "risk": perms.PERMS[k][4],
-                                   "about": perms.PERMS[k][3 if lang == "uk" else 2], "declared": k in it.declared,
+                                   "about": perms.about(k, lang), "declared": k in it.declared,
                                    "found": it.found.get(k, []), "granted": k in g} for k in it.needed],
                         "missing": self.missing(it), "blocked": self.blocked(it), "unknownPerms": it.unknown,
                         "denied": [{"k": k, "label": perms.label(k, lang), "what": w} for k, w in it.denied.items()],
@@ -782,13 +809,17 @@ class Host:
                         "error": ui.pop("error", "") or it.error, "file": str(it.path.relative_to(self.folder.parent)), **ui})
         return {"t": "plugins", "on": self.master(), "folder": str(self.folder), "list": out}
 
+    def lang_ok(self, it):
+        """Говорит ли плагин на языке дека: заявил его в LANGS или его тексты есть в мовном пакете; LANGS нет — неизвестно (None)."""
+        return i18n.speaks(it.id, it.langs)
+
     def health(self):
         """Для вкладки «Дек» в диагностике: что с каждым плагином и сколько он думает."""
         lang, out = self.lang(), []
         for pid, it in sorted(self.items.items()):
             st = {k: {"n": v[0], "avg": round(v[1] / v[0] * 1000, 1) if v[0] else 0, "max": round(v[2] * 1000, 1)}
                   for k, v in it.stats.items()}
-            out.append({"id": pid, "name": text_of(it.name, lang) or pid, "on": self.enabled(pid), "running": it.obj is not None,
+            out.append({"id": pid, "name": text_of(it.name, pid=pid) or pid, "on": self.enabled(pid), "running": it.obj is not None,
                         "crashed": it.crashed, "halted": it.halted, "error": it.error, "blocked": self.blocked(it),
                         "fails": len([t for t in it.fails if time.monotonic() - t < CRASH_WINDOW]), "stats": st})
         return out
@@ -859,7 +890,7 @@ class Host:
         """Нажали кнопку / переключатель / ползунок / плитку плагина."""
         it = self.items.get(pid)
         if not it or it.obj is None:
-            raise RuntimeError(i18n.tr(f"плагин «{pid}» выключен", f"плагін «{pid}» вимкнено"))
+            raise RuntimeError(i18n.tr("plugin «{0}» is off", "плагін «{0}» вимкнено", pid))
         if not hasattr(it.obj, "action"):
             return None
         t0 = time.perf_counter()
@@ -870,7 +901,7 @@ class Host:
             it.took("action", time.perf_counter() - t0)
             self.fail(it, f"action({aid})", e)
             log.warning("Плагин «%s»: action(%s): %s", pid, aid, e)
-            await self.deck.toast(f"{text_of(it.name, self.lang()) or pid}: {e}")
+            await self.deck.toast(f"{text_of(it.name, pid=pid) or pid}: {e}")
             return None
         await self.push()
         return r

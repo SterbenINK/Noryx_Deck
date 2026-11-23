@@ -141,7 +141,7 @@ class Media:
         app = (pick.source_app_user_model_id or "") if pick is not None else ""
         if app != self._last_app:
             self._last_app = app
-            log.info("Плеер в доке: %s", app or i18n.tr("нет", "немає"))
+            log.info("Плеер в доке: %s", app or i18n.tr("none", "немає"))
         return pick
 
     async def _read(self, s):

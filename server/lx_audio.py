@@ -139,7 +139,7 @@ def toggle_mic():
         raise RuntimeError("микрофон не найден")
     new = not bool(src.mute)
     p.mute(src, new)
-    log.info("Микрофон: %s", i18n.tr("выкл", "вимк") if new else i18n.tr("вкл", "увімк"))
+    log.info("Микрофон: %s", i18n.tr("off", "вимк") if new else i18n.tr("on", "увімк"))
     return new
 
 
@@ -173,7 +173,7 @@ class Loopback:
         import lx_sound
         rate = lx_sound.RATE
         self.stream = lx_sound.PulseStream(np, "@DEFAULT_MONITOR@", lambda buf, n, *_: callback(buf[:n, 0].copy(), rate),
-                                           "in", i18n.tr("Визуализатор", "Візуалізатор"))
+                                           "in", i18n.tr("Visualizer", "Візуалізатор"))
 
     @property
     def error(self):

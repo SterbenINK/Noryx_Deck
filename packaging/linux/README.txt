@@ -1,96 +1,98 @@
-NORYX для Linux — стрим-дек на телефоне для твоего ПК
-Сделан под KDE Plasma 6 (Wayland) с PipeWire, как в Nobara / Fedora. Нужен python3 — в Fedora/Nobara он уже есть.
+NORYX for Linux — a stream deck on your phone for your PC
+Made for KDE Plasma 6 (Wayland) with PipeWire, as in Nobara / Fedora. Needs python3 — Fedora/Nobara already have it.
 
-УСТАНОВКА
-1. Распакуй архив, например в домашнюю папку — получится ~/Noryx
-   (Dolphin: ПКМ по архиву → «Распаковать» → «Распаковать архив сюда»).
-2. Запусти start.sh: в Konsole — cd ~/Noryx && ./start.sh (или двойной клик по start.sh → «Выполнить»).
-   • Первый раз он сам поставит библиотеки в папку .venv рядом (~60 МБ, 1–2 минуты, нужен интернет).
-     В систему ничего не ставится, пароль root не нужен.
-   • В конце покажет адрес для телефона. В меню приложений появится «Noryx» — дальше запускай его.
-   • У часов — значок дека: правый клик — открыть дек, «Запускать при входе в систему», лог, перезапуск, выход.
-3. Один раз, по желанию: sudo ./system-setup.sh — откроет порты в брандмауэре (если он мешает телефону),
-   даст доступ к виртуальной клавиатуре для кнопок-хоткеев и к Arduino (для плагина лампы). Потом перезайди в систему.
-   start.sh сам подскажет, если это нужно.
+INSTALLATION
+1. Unpack the archive, for example into your home folder — you get ~/Noryx
+   (Dolphin: right-click the archive → «Extract» → «Extract archive here»).
+2. Run start.sh: in Konsole — cd ~/Noryx && ./start.sh (or double-click start.sh → «Execute»).
+   • The first time it installs the libraries into the .venv folder next to it (~60 MB, 1–2 minutes, internet needed).
+     Nothing is installed into the system, no root password needed.
+   • At the end it shows the address for the phone. «Noryx» appears in the app menu — start it from there from now on.
+   • By the clock — the deck icon: right-click — open the deck, «Start at login», log, restart, exit.
+3. Once, if you like: sudo ./system-setup.sh — opens the firewall ports (if it blocks the phone),
+   gives access to the virtual keyboard for hotkey buttons and to Arduino (for the lamp plugin). Then log in again.
+   start.sh tells you itself if this is needed.
 
-ТЕЛЕФОН (Android, тот же Wi-Fi, что и у ПК)
-1. Скинь на телефон Noryx.apk из этой папки (например, себе в Telegram «Избранное») и установи.
-   Телефон может попросить разрешить установку из этого источника, а Play Защита — предупредить
-   о неизвестном приложении: «Всё равно установить».
-2. Открой приложение — оно само найдёт ПК. Не нашло — «Ввести адрес» и впиши адрес, который показал start.sh
-   (он же — в подсказке значка в трее). Можно и без приложения: открой этот адрес в браузере телефона.
-3. Первый раз телефон попросит код из 6 цифр — ПК покажет его уведомлением у часов (и подсказкой на уже
-   подключённых телефонах). Дальше телефон помнит себя сам. Свои устройства и «Забыть» — в окне «Устройства».
+PHONE (Android, the same Wi-Fi as the PC)
+1. Send Noryx.apk from this folder to the phone (for example, to your Telegram «Saved Messages») and install it.
+   The phone may ask to allow installs from this source, and Play Protect may warn
+   about an unknown app: «Install anyway».
+2. Open the app — it finds the PC by itself. It didn't — «Enter the address» and type the address start.sh showed
+   (it's also in the tray icon tooltip). It also works without the app: open that address in the phone's browser.
+3. The first time the phone asks for a 6-digit code — the PC shows it as a notification by the clock (and as a hint on
+   phones already connected). After that the phone remembers itself. Own devices and «Forget» — the «Devices» window.
 
-ЧТО УМЕЕТ
-• Режимы с кнопками: программы, группы программ, макросы, хоткеи. Кнопка «+» — программы из меню приложений,
-  включая Flatpak и игры Steam. «Выбрать программу на ПК…» — для AppImage, скриптов и .desktop-файлов.
-  При первом запуске из стандартного набора сами убираются программы, которых на этом ПК нет.
-  Режим может сам запускать свои программы и закрывать программы другого режима —
-  это включается в Настройках: «Автозапуск базы» и «Закрывать чужие программы».
-• Третий режим «Хоткеи» (включается в Настройках → Функции): мелкие плитки (8×4) с сочетаниями клавиш —
-  свои добавляются через «+», «Проверить» сразу жмёт сочетание на ПК; внизу можно переключиться
-  на экранную клавиатуру или цифровой блок. Хоткей можно поставить и в обычный режим: «+» → «Хоткей…».
-• Скрипты как в AutoHotkey: «+» → «Скрипт…» — одна кнопка жмёт сочетания по очереди с паузами, набирает
-  текст, зажимает клавиши. Строка — шаг: ctrl+c / пауза 500 / текст Hello! / держать w 1500.
-  Повторить N раз или «По кругу»; нажал кнопку ещё раз — стоп. «Проверить» — один прогон сразу на ПК.
-  Текст набирается нажатиями клавиш, поэтому только латиница и при английской раскладке.
-• Окно режима — удержи режим (¾ секунды): название, значок, цвет и размер плиток — по горизонтали 4–8,
-  по вертикали 2–4 (по умолчанию 4×2, у «Хоткеев» 8×4). Свайп вверх/вниз — соседний режим.
-• Язык — русский или украинский: Настройки → Язык.
-• Свои режимы: на главном экране «Правка» → «Новый режим» (название, значок, цвет). Там же порядок
-  (две плитки подряд — поменять местами), карандаш — переименовать, крестик — удалить свой режим.
-  Больше двух режимов — плитки становятся маленькими 2×2, листаются свайпом.
-  Цвет режима выбирается только в окне режима — любой: кружок с радугой открывает круг оттенков,
-  насыщенность и яркость; «Изменить цвета» — подправить цвет или убрать свой.
-• Часы с датой в доке — Настройки → «Часы».
-• «Правка»: плитки и режимы перетаскиваются пальцем; в правой панели — её ширина и порядок блоков (стрелки).
-• Плитка запущенной программы показывает её окно, ещё одно нажатие — сворачивает.
-• Режим часов: деком не пользуются 30 минут — часы на весь экран, приглушённо; играет музыка — управление
-  и визуализатор. Тап — обратно. Через час экран гаснет. Время и выключение — Настройки → Экран.
-• Плагины — Настройки → кнопка «Плагины» в шапке: включить / выключить каждый или все разом. Свой плагин — файл .py в папке
-  plugins (как писать — plugins/README.txt). Ставь только свои или проверенные: плагин — программа на ПК.
-• Визуализатор: цвет из обложки трека или свой — Настройки → Экран. В окне режима готовые цвета можно
-  заменить своими («Изменить цвета» → тап по готовому).
-• Док: громкость и микшер программ (PipeWire), смена выхода звука, плеер (Spotify / YouTube Music /
-  «что играет» — Настройки → Музыка; работает с любым плеером, который видит виджет плеера KDE),
-  загрузка и температуры ЦП и видеокарты — сами, ничего ставить не надо.
-• Саундпад — кнопка с нотой в доке. Звуки (mp3, wav, ogg, flac) кидай в папку sounds/
-  или жми «Добавить звуки с ПК…».
-  Чтобы звуки слышали в Discord: «Звук» → «В эфир» — «Noryx Virtual Mic» (дек создаёт этот
-  виртуальный микрофон сам, VB-Audio не нужен), «Голос с микрофона — туда же» — твой микрофон.
-  В Discord: Настройки → Голос и видео → Устройство ввода — «Noryx Virtual Mic».
-  Шумоподавление Krisp в Discord лучше выключить — оно режет звуки.
-• Хоткеи: кнопки-сочетания нажимаются через виртуальную клавиатуру. «Оверлей FPS» жмёт Shift справа + F12 —
-  это MangoHud. Скриншот — Spectacle (выделить область), «Блок ПК» — экран блокировки.
-• Плагины (лампа на Arduino, монитор, Discord, игры…) и моды (свой вид, компоновка главного экрана из панелей) —
-  Настройки → «Плагины» / «Моды» → «Каталог»: установить, обновить, откатить. Инструкции — в README каждого плагина.
+WHAT IT CAN DO
+• Modes with buttons: apps, app groups, macros, hotkeys. The «+» button — apps from the app menu,
+  including Flatpak and Steam games. «Pick an app on the PC…» — for AppImage, scripts and .desktop files.
+  On the first run, apps from the default set that aren't on this PC are removed by themselves.
+  A mode can start its apps by itself and close the apps of another mode —
+  turn this on in Settings: «Autostart the base» and «Close other apps».
+• The «Hotkeys» mode (turned on in Settings → Features): small tiles (8×4) with key combinations —
+  add your own with «+», «Check» presses the combination on the PC right away; at the bottom you can switch
+  to the on-screen keyboard or the numpad. A hotkey can also go into a regular mode: «+» → «Hotkey…».
+• Scripts like AutoHotkey: «+» → «Script…» — one button presses combinations in turn with pauses, types
+  text, holds keys. A line is a step: ctrl+c / wait 500 / text Hello! / hold w 1500.
+  Repeat N times or «Loop»; press the button again — stop. «Check» — one run on the PC right away.
+  Text is typed with key presses, so only Latin letters and with the English layout.
+• Mode window — hold the mode (¾ second): name, icon, color and tile size — horizontally 4–8,
+  vertically 2–4 (4×2 by default, 8×4 for «Hotkeys»). Swipe up/down — the next mode.
+• Language — Settings → «Languages»: English and Ukrainian are built in, others download from the catalog with a tap
+  (the icon menu, the log and the app menu shortcut too).
+• Your own modes: on the home screen «Edit» → «New mode» (name, icon, color). There too — the order
+  (two tiles in a row — swap them), the pencil — rename, the cross — delete your mode.
+  More than two modes — the tiles become small 2×2 and scroll with a swipe.
+  The mode color is chosen only in the mode window — any color: the rainbow circle opens the hue wheel,
+  saturation and brightness; «Edit colors» — adjust a color or remove your own.
+• A clock with the date in the dock — Settings → «Clock».
+• «Edit»: tiles and modes are dragged with a finger; in the right panel — its width and the block order (arrows).
+• The tile of a running app shows its window, one more press — minimizes it.
+• Clock mode: the deck is unused for 30 minutes — a dimmed full-screen clock; music is playing — controls
+  and the visualizer. Tap — back. An hour later the screen turns off. Time and turning off — Settings → Screen.
+• Plugins — Settings → the «Plugins» button in the header: turn each on / off, or all at once. Your own plugin — a .py
+  file in the plugins folder (how to write one — plugins/README.txt). Install only your own or trusted ones: a plugin is
+  a program on the PC.
+• Visualizer: color from the track cover or your own — Settings → Screen. In the mode window the ready colors can be
+  replaced with your own («Edit colors» → tap a ready one).
+• Dock: volume and app mixer (PipeWire), sound output change, player (Spotify / YouTube Music /
+  «what's playing» — Settings → Music; works with any player the KDE player widget sees),
+  CPU and GPU load and temperatures — by themselves, nothing to install.
+• Soundpad — the note button in the dock. Drop sounds (mp3, wav, ogg, flac) into the sounds/ folder
+  or press «Add sounds from the PC…».
+  To make Discord hear the sounds: «Sound» → «On air» — «Noryx Virtual Mic» (the deck creates this
+  virtual microphone itself, no VB-Audio needed), «Voice from the microphone — there too» — your microphone.
+  In Discord: Settings → Voice & Video → Input Device — «Noryx Virtual Mic».
+  Better turn off Krisp noise suppression in Discord — it cuts the sounds.
+• Hotkeys: combination buttons are pressed through a virtual keyboard. «FPS overlay» presses right Shift + F12 —
+  that's MangoHud. Screenshot — Spectacle (select an area), «Lock PC» — the lock screen.
+• Plugins (Arduino lamp, monitor, Discord, games…) and mods (your own look, a home screen layout of panels) —
+  Settings → «Plugins» / «Mods» → «Catalog»: install, update, roll back. Instructions — in each plugin's README.
 
-ЕСЛИ ЧТО-ТО НЕ ТАК
-• Телефон не подключается — sudo ./system-setup.sh (порты 8765/TCP и 8766/UDP). Телефон и ПК должны быть
-  в одной сети (гостевой Wi-Fi роутера не подойдёт).
-• Хоткеи не нажимаются — sudo ./system-setup.sh (доступ к /dev/uinput).
-• Плагин лампы пишет «нет доступа (dialout)» — sudo ./system-setup.sh и перезайди в систему.
-• Значка в трее нет — в GNOME нужно расширение AppIndicator; без значка дек всё равно работает (./stop.sh — выход).
-• Установка не прошла — проверь интернет и запусти ./start.sh ещё раз. Подробности: logs/install.log.
-  Совсем сломалось — удали папку .venv и запусти ./start.sh заново.
-• Дек не запускается или глючит — смотри logs/server.log.
-• Остановить дек — значок в трее → «Выход» (или ./stop.sh).
-• Телефон-киоск (отдельный телефон только под дек): телефон по USB с отладкой, без аккаунтов → ./phone.sh.
-  Выключить — Настройки дека → «Киоск» или ./phone.sh off; вернуть всё — ./phone.sh release и restore.
+IF SOMETHING'S WRONG
+• The phone doesn't connect — sudo ./system-setup.sh (ports 8765/TCP and 8766/UDP). The phone and the PC must be
+  on the same network (the router's guest Wi-Fi won't do).
+• Hotkeys aren't pressed — sudo ./system-setup.sh (access to /dev/uinput).
+• The lamp plugin says «no access (dialout)» — sudo ./system-setup.sh and log in again.
+• No tray icon — GNOME needs the AppIndicator extension; without the icon the deck still works (./stop.sh — exit).
+• The installation failed — check the internet and run ./start.sh again. Details: logs/install.log.
+  Completely broken — delete the .venv folder and run ./start.sh again.
+• The deck doesn't start or glitches — see logs/server.log.
+• Stop the deck — tray icon → «Exit» (or ./stop.sh).
+• Kiosk phone (a separate phone just for the deck): the phone over USB with debugging, without accounts → ./phone.sh.
+  Turn it off — deck Settings → «Kiosk» or ./phone.sh off; bring everything back — ./phone.sh release and restore.
 
-Новый телефон подключается только кодом из 6 цифр, который показывает ПК. Роли устройств — окно «Устройства».
-Пользуйся дома, не в общественном Wi-Fi.
+A new phone connects only with the 6-digit code the PC shows. Device roles — the «Devices» window.
+Use it at home, not on public Wi-Fi.
 
-ОБНОВЛЕНИЯ
-Через 10 секунд после запуска дек проверяет GitHub. Есть новая версия — всплывёт «Доступно обновление»
-(на телефоне и у часов). Обновить — значок в трее → «Обновить дек» или Настройки → Обновления → «Обновить»:
-дек скачает новую версию, при необходимости поставит библиотеки и перезапустится.
-Настройки (data/) и звуки (sounds/) не трогает. «Вернуть прошлую версию» — откат.
-«Обновляться самому» (по умолчанию выключено) — ставить новые версии без кнопки.
-Без интернета — «Обновить из файла…» (в трее и в Настройках → Обновления): на ПК откроется окно
-выбора — укажи Noryx-linux.tar.gz или zip исходников с GitHub (Code → Download ZIP).
-Папку-клон git дек сам не обновляет — там git pull.
-Вручную: ./stop.sh, распакуй новую версию поверх этой папки и запусти ./start.sh.
-Удалить: выключи «Запускать при входе в систему» в меню значка, нажми «Выход», удали папку
-и ~/.local/share/applications/noryx.desktop.
+UPDATES
+10 seconds after starting, the deck checks GitHub. A new version exists — «Update available» pops up
+(on the phone and by the clock). To update — tray icon → «Update the deck» or Settings → Updates → «Update»:
+the deck downloads the new version, installs libraries if needed and restarts.
+It doesn't touch settings (data/) and sounds (sounds/). «Restore the previous version» — rollback.
+«Update by itself» (off by default) — install new versions without the button.
+Without internet — «Update from file…» (in the tray and in Settings → Updates): a picker window
+opens on the PC — choose Noryx-linux.tar.gz or a source zip from GitHub (Code → Download ZIP).
+The deck doesn't update a git clone folder itself — use git pull there.
+Manually: ./stop.sh, unpack the new version over this folder and run ./start.sh.
+Uninstall: turn off «Start at login» in the icon menu, press «Exit», delete the folder
+and ~/.local/share/applications/noryx.desktop.

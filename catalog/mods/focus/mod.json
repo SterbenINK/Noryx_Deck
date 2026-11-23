@@ -1,9 +1,29 @@
 {
- "name": {"ru": "Фокус-таймер", "uk": "Фокус-таймер"},
- "about": {"ru": "Пример мода с кодом: своя панель «Фокус-таймер» (25 / 5 минут) для компоновки и подсказка при смене режима. Показывает DeckAPI — как моды вмешиваются в работу дека.",
-           "uk": "Приклад мода з кодом: своя панель «Фокус-таймер» (25 / 5 хвилин) для компонування й підказка при зміні режиму. Показує DeckAPI — як моди втручаються в роботу дека."},
- "version": "1.0.0",
+ "name": {
+  "en": "Focus timer",
+  "uk": "Фокус-таймер"
+ },
+ "about": {
+  "en": "A sample mod with code: its own «Focus timer» panel (25 / 5 minutes) for layouts and a hint when the mode changes. Shows DeckAPI — how mods step into the deck's work.",
+  "uk": "Приклад мода з кодом: своя панель «Фокус-таймер» (25 / 5 хвилин) для компонування й підказка при зміні режиму. Показує DeckAPI — як моди втручаються в роботу дека."
+ },
+ "version": "1.1.0",
  "author": "Noryx",
- "changes": [["1.0.0", "Первая версия", "Перша версія"]],
- "js": "mod.js"
+ "changes": [
+  [
+   "1.1.0",
+   "English is now the main language, Ukrainian is built in, other languages come from the deck's language packs",
+   "Основна мова тепер англійська, українська вбудована, інші мови — з мовних пакетів деку"
+  ],
+  [
+   "1.0.0",
+   "First version",
+   "Перша версія"
+  ]
+ ],
+ "js": "mod.js",
+ "langs": [
+  "en",
+  "uk"
+ ]
 }

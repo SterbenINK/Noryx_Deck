@@ -1,16 +1,16 @@
-ЛАМПА (ARDUINO + МОДУЛЬ XY-MOS) — плагин «Лампа (Arduino)»: ползунок яркости в доке, шаг сценария «лампа 60».
+LAMP (ARDUINO + XY-MOS MODULE) — the «Lamp (Arduino)» plugin: a brightness slider in the dock, the scenario step «lamp 60».
 
-Поставить: Настройки → «Плагины» → «Каталог» → «Лампа (Arduino)» → «Установить». pyserial поставится сам при первом включении.
+Install: Settings → «Plugins» → «Catalog» → «Lamp (Arduino)» → «Install». pyserial installs itself on the first start.
 
-1. Прошей ClaudeLamp/ClaudeLamp.ino через Arduino IDE (плата Arduino Nano; у китайских Nano — процессор
+1. Flash ClaudeLamp/ClaudeLamp.ino with the Arduino IDE (board Arduino Nano; for Chinese Nano clones — processor
    «ATmega328P (Old Bootloader)»).
-2. Подключение:  D9 → PWM/TRIG модуля,  GND → GND модуля (рядом с PWM),
-                 БП 12 В → VIN+/VIN−,  лампа → OUT+/OUT−,  резистор 10 кОм между D9 и GND.
-3. Воткни плату в USB ПК — дек найдёт её сам (порт запоминается), ползунок оживёт.
+2. Wiring:  D9 → PWM/TRIG of the module,  GND → GND of the module (next to PWM),
+            12 V PSU → VIN+/VIN−,  lamp → OUT+/OUT−,  a 10 kΩ resistor between D9 and GND.
+3. Plug the board into the PC's USB — the deck finds it by itself (the port is remembered), the slider comes alive.
 
-Ползунок до упора влево — выключить; кнопка-лампочка — вкл/выкл на прежней яркости.
-Яркость хранится в самой плате и восстанавливается после включения. «Проверить» в настройках плагина — найти плату сейчас.
-Прошивка: дек отпускает порт через 10 с после последнего касания ползунка — потом жми «Загрузить».
-Моргает при первом касании после паузы — плата перезагружается при открытии порта: конденсатор 10 мкФ между RESET и GND
-(на время прошивки вынуть). Пищит — подними PWM_HZ в скетче (до 20000); на 1% не светится — увеличь MIN_DUTY.
-Linux: доступ к порту — группа dialout (sudo ./system-setup.sh в папке дека).
+Slider all the way left — off; the bulb button — on/off at the previous brightness.
+The brightness is stored in the board itself and restored after power-on. «Check» in the plugin settings — find the board now.
+Flashing: the deck releases the port 10 s after the last slider touch — then press «Upload».
+It blinks on the first touch after a pause — the board resets when the port opens: a 10 µF capacitor between RESET and GND
+(remove it while flashing). It whines — raise PWM_HZ in the sketch (up to 20000); no light at 1% — increase MIN_DUTY.
+Linux: port access — the dialout group (sudo ./system-setup.sh in the deck folder).

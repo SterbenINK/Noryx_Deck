@@ -19,20 +19,28 @@ import socket
 import threading
 import time
 
-NAME = {"ru": "Vintage Story", "uk": "Vintage Story"}
-ABOUT = {"ru": "Режим игры: здоровье и лечение (S&R System), питание, мир, хоткеи. Нужен мод игры Noryx Link",
+NAME = {"en": "Vintage Story", "uk": "Vintage Story"}
+ABOUT = {"en": "Game mode: health and treatment (S&R System), nutrition, world, hotkeys. Needs the Noryx"
+               " Link game mod",
          "uk": "Режим гри: здоров'я й лікування (S&R System), харчування, світ, хоткеї. Потрібен мод гри Noryx Link"}
 STATE_PORT, CMD_PORT = 47811, 47812
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = ["network", "input", "files"]     # files — читаем ключ мода игры из его ModConfig
-VERSION = "1.3.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
-CHANGES = [("1.3.0", "Команды игре — с ключом мода Noryx Link 0.3.0 (без него мод их не выполнит); нужно разрешение «Файлы»",
+VERSION = "1.4.1"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
+CHANGES = [("1.4.1", "Instructions (README) in English", "Інструкція (README) — англійською й українською"),
+           ("1.4.0", "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+            "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"),
+           ("1.3.0", "Commands to the game — with the Noryx Link 0.3.0 mod key (without it the mod won't run "
+                     "them); needs the «Files» permission",
              "Команди грі — з ключем мода Noryx Link 0.3.0 (без нього мод їх не виконає); потрібен дозвіл «Файли»"),
-           ("1.2.0", "Кукла во всю высоту, на ней только значки мода; иконки травм как в игре; название травмы крупнее, шрифт толще; вышли из игры — значения сбрасываются",
+           ("1.2.0", "Full-height doll with only the mod's marks; injury icons as in the game; bigger injury "
+                     "name, bolder font; leaving the game resets the values",
              "Лялька на всю висоту, на ній лише значки мода; іконки травм як у грі; назва травми більша, шрифт товщий; вийшли з гри — значення скидаються"),
-           ("1.1.0", "Здоровье как во вкладке S&R 0.7: отметки зон на кукле, общее состояние, карточка травмы, основное и дополнительное лечение с подсказками (нужен S&R 0.7.18+)",
+           ("1.1.0", "Health like the S&R 0.7 tab: zone marks on the doll, overall condition, injury card, "
+                     "main and optional treatment with tips (needs S&R 0.7.18+)",
              "Здоров'я як у вкладці S&R 0.7: позначки зон на ляльці, загальний стан, картка травми, основне й додаткове лікування з підказками (потрібен S&R 0.7.18+)"),
-           ("1.0.0", "Первая версия в каталоге: здоровье (S&R), сытость, мир, хоткеи",
+           ("1.0.0", "First version in the catalog: health (S&R), satiety, world, hotkeys",
             "Перша версія в каталозі: здоров'я (S&R), ситість, світ, хоткеї")]
 LIVE = 5.0                                  # столько секунд без пакета — «нет связи с игрой»
 
@@ -40,11 +48,11 @@ LIVE = 5.0                                  # столько секунд без
 THEME = {"bg": "#1E1812", "panel": "#2B221A", "border": "#4A3A2A", "text": "#E8D9B5", "muted": "#A8977A",
          "accent": "#D9B26A", "radius": 6, "font": "serif", "weight": 600}      # шрифт потолще — как в игре
 INJURY_ICONS = {"wound", "bruise", "fracture", "burn", "frostbite", "concussion", "dislocation"}   # icons/<тип>.png — рисунки S&R
-FOOD = [("fruit", "Фрукты", "Фрукти", "#C9563C"), ("veg", "Овощи", "Овочі", "#5E9A3A"),
-        ("grain", "Зерно", "Зерно", "#D2AE52"), ("protein", "Белки", "Білки", "#9C5B3B"),
-        ("dairy", "Молочное", "Молочне", "#DCD6C4")]
-SEASONS = {"spring": ("Весна", "Весна"), "summer": ("Лето", "Літо"), "fall": ("Осень", "Осінь"), "winter": ("Зима", "Зима")}
-PRECIP = {"none": ("ясно", "ясно"), "rain": ("дождь", "дощ"), "snow": ("снег", "сніг"), "hail": ("град", "град")}
+FOOD = [("fruit", "Fruit", "Фрукти", "#C9563C"), ("veg", "Vegetables", "Овочі", "#5E9A3A"),
+        ("grain", "Grain", "Зерно", "#D2AE52"), ("protein", "Protein", "Білки", "#9C5B3B"),
+        ("dairy", "Dairy", "Молочне", "#DCD6C4")]
+SEASONS = {"spring": ("Spring", "Весна"), "summer": ("Summer", "Літо"), "fall": ("Autumn", "Осінь"), "winter": ("Winter", "Зима")}
+PRECIP = {"none": ("clear", "ясно"), "rain": ("rain", "дощ"), "snow": ("snow", "сніг"), "hail": ("hail", "град")}
 
 # кукла S&R System — как в игре (GuiElementBodyDoll): 150×290, правая рука персонажа — слева на экране
 DOLL = {0: (55, 10, 40, 40), 1: (50, 54, 50, 88), 3: (28, 54, 19, 84), 2: (103, 54, 19, 84), 5: (51, 145, 23, 124), 4: (76, 145, 23, 124)}
@@ -145,10 +153,10 @@ class Plugin:
             self.seen_ack = a["id"]
             if not a.get("ok") and a.get("text") == "key":
                 self.key = None                  # перечитаем: ключ могли пересоздать (удалили файл, новая игра)
-                self.api.toast(self.api.tr("Мод игры не принял ключ — зайди в мир ещё раз или перезапусти игру",
+                self.api.toast(self.api.tr("The game mod didn't accept the key — enter the world again or restart the game",
                                            "Мод гри не прийняв ключ — зайди у світ ще раз або перезапусти гру"))
             elif not a.get("ok") and a.get("text"):
-                self.api.toast(self.api.tr("Игра: ", "Гра: ") + str(a["text"]))
+                self.api.toast(self.api.tr("Game: ", "Гра: ") + str(a["text"]))
         if first:
             self.api.log.info("vintage: игра на связи")
         self.got_at = time.monotonic()
@@ -246,7 +254,7 @@ class Plugin:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 s.sendto(json.dumps(cmd, ensure_ascii=False).encode("utf-8"), ("127.0.0.1", CMD_PORT))
         except OSError as e:
-            self.api.toast(self.api.tr("Мод игры не отвечает: ", "Мод гри не відповідає: ") + str(e))
+            self.api.toast(self.api.tr("The game mod isn't responding: ", "Мод гри не відповідає: ") + str(e))
 
     # ---------- нажатия ----------
     def action(self, aid, value):
@@ -270,7 +278,7 @@ class Plugin:
             self.open.symmetric_difference_update({k})
         elif aid.startswith("treat|") or aid.startswith("item|"):
             if not self.live():
-                self.api.toast(tr("Нет связи с игрой", "Немає зв'язку з грою"))
+                self.api.toast(tr("No connection to the game", "Немає зв'язку з грою"))
                 return
             parts = aid.split("|", 4)
             zone, typ, treat = int(parts[1]), parts[2], parts[3]
@@ -286,7 +294,7 @@ class Plugin:
             self.pick = int(aid[7:])
         elif aid == "hkNew":
             keys = self.keys()
-            keys.append({"name": tr("Новая", "Нова"), "kind": "game", "text": ""})
+            keys.append({"name": tr("New", "Нова"), "kind": "game", "text": ""})
             self.pick, self.edit = len(keys) - 1, True
             self.save_keys(keys)
         elif aid == "hkDel":
@@ -307,7 +315,7 @@ class Plugin:
                 keys[self.pick][field] = v[:2000]
                 self.save_keys(keys)
                 if field == "text":
-                    self.api.toast(tr("Сохранено", "Збережено"))
+                    self.api.toast(tr("Saved", "Збережено"))
 
     # ---------- хоткеи ----------
     def keys(self):
@@ -325,13 +333,13 @@ class Plugin:
             return
         k = keys[i]
         if not k.get("text", "").strip():
-            self.api.toast(tr("Пустая кнопка — нажми «Изменить»", "Порожня кнопка — натисни «Змінити»"))
+            self.api.toast(tr("Empty button — press «Edit»", "Порожня кнопка — натисни «Змінити»"))
             return
         if k.get("kind") == "keys":                         # скрипт дека: клавиши в активное окно
             self.api.script(k["text"], label=k.get("name") or "Vintage Story", key=f"vs{i}")
             return
         if not self.live():
-            self.api.toast(tr("Нет связи с игрой", "Немає зв'язку з грою"))
+            self.api.toast(tr("No connection to the game", "Немає зв'язку з грою"))
             return
         for line in k["text"].splitlines():                # команды игры через мод — по строке
             line = line.strip()
@@ -348,21 +356,20 @@ class Plugin:
     # ---------- вид ----------
     def ui(self):
         tr, live = self.api.tr, self.live()
-        note = [] if live else [{"type": "label", "label": tr("нет связи с игрой", "немає зв'язку з грою"), "color": "#A8977A"}]
+        note = [] if live else [{"type": "label", "label": tr("no connection to the game", "немає зв'язку з грою"), "color": "#A8977A"}]
         return {
             "theme": THEME,
             "mode": {"name": "Vintage Story", "icon": "gamepad", "color": "#D9B26A",
-                     "sub": {"ru": "Здоровье, питание, мир, хоткеи" if live else "Нет связи с игрой",
+                     "sub": {"en": "Health, nutrition, world, hotkeys" if live else "No connection to the game",
                              "uk": "Здоров'я, харчування, світ, хоткеї" if live else "Немає зв'язку з грою"}},
             "dock": [{"type": "card", "go": "mode", "title": "Vintage Story", "icon": "🌍", "items": note + [
                 self.hp_bar(), self.sat_bar(), {"type": "text", "label": self.season(), "value": self.when()}]}],
             "screen": [{"type": "grid", "widths": [1, 3.2], "fill": True, "items": [
                 {"type": "grid", "cols": 1, "items": self.stats()},
                 {"type": "card", "scroll": self.tab != "health", "items": note + self.menu()}]}],
-            "settings": [{"type": "text", "label": tr("Мод игры", "Мод гри"),
-                          "value": tr("на связи", "на зв'язку") if live else tr("нет связи", "немає зв'язку")},
-                         {"type": "label", "label": tr(f"Нужен мод Noryx Link в игре. Данные — UDP {STATE_PORT}, команды — {CMD_PORT} (127.0.0.1)",
-                                                       f"Потрібен мод Noryx Link у грі. Дані — UDP {STATE_PORT}, команди — {CMD_PORT} (127.0.0.1)")}],
+            "settings": [{"type": "text", "label": tr("Game mod", "Мод гри"),
+                          "value": tr("online", "на зв'язку") if live else tr("no connection", "немає зв'язку")},
+                         {"type": "label", "label": tr("Needs the Noryx Link mod in the game. Data — UDP {0}, commands — {1} (127.0.0.1)", "Потрібен мод Noryx Link у грі. Дані — UDP {0}, команди — {1} (127.0.0.1)", STATE_PORT, CMD_PORT)}],
         }
 
     def num(self, k, default=0.0):
@@ -371,23 +378,23 @@ class Plugin:
 
     def hp_bar(self, **kw):
         hp, mx = self.num("hp"), self.num("hpMax", 15) or 15
-        return {"type": "bar", "label": self.api.tr("Здоровье", "Здоров'я"), "icon": "❤", "value": hp, "max": mx,
+        return {"type": "bar", "label": self.api.tr("Health", "Здоров'я"), "icon": "❤", "value": hp, "max": mx,
                 "color": "#C8432F", "text": f"{hp:g} / {mx:g}" if self.data else "—", "size": 12, **kw}
 
     def sat_bar(self, **kw):
         s, mx = self.num("sat"), self.num("satMax", 1500) or 1500
-        return {"type": "bar", "label": self.api.tr("Сытость", "Ситість"), "icon": "🍖", "value": s, "max": mx,
+        return {"type": "bar", "label": self.api.tr("Satiety", "Ситість"), "icon": "🍖", "value": s, "max": mx,
                 "color": "#D9B26A", "text": f"{s:.0f} / {mx:.0f}" if self.data else "—", "size": 12, **kw}
 
     def season(self):
         s = SEASONS.get(str(self.data.get("season")))
-        return self.api.tr(*s) if s else self.api.tr("Мир", "Світ")
+        return self.api.tr(*s) if s else self.api.tr("World", "Світ")
 
     def when(self):
         d = self.data
         if not d:
             return "—"
-        return f'{self.api.tr("день", "день")} {d.get("day", "?")} · {d.get("time", "")}'
+        return f'{self.api.tr("day", "день")} {d.get("day", "?")} · {d.get("time", "")}'
 
     def stats(self):
         tr, t = self.api.tr, self.tab
@@ -396,12 +403,12 @@ class Plugin:
         return [
             self.hp_bar(id="tab:health", on=t == "health"),
             self.sat_bar(id="tab:food", on=t == "food"),
-            {"type": "stat", "id": "tab:world", "on": t == "world", "icon": "🌡", "label": tr("Температура", "Температура"),
+            {"type": "stat", "id": "tab:world", "on": t == "world", "icon": "🌡", "label": tr("Temperature", "Температура"),
              "value": f"{temp:.1f}" if self.data else "—", "unit": "°C",
-             "sub": tr("воздух ", "повітря ") + (f'{self.num("air"):g}°C' if "air" in self.data else "—"),
+             "sub": tr("air ", "повітря ") + (f'{self.num("air"):g}°C' if "air" in self.data else "—"),
              "color": "#E07A4F" if hot else "#7FB2D9" if cold else "#E8D9B5"},
-            {"type": "stat", "id": "tab:keys", "on": t == "keys", "icon": "⌨", "label": tr("свои кнопки", "свої кнопки"),
-             "value": tr("Хоткеи", "Хоткеї")},
+            {"type": "stat", "id": "tab:keys", "on": t == "keys", "icon": "⌨", "label": tr("your buttons", "свої кнопки"),
+             "value": tr("Hotkeys", "Хоткеї")},
         ]
 
     def menu(self):
@@ -412,9 +419,9 @@ class Plugin:
         tr, d = self.api.tr, self.data
         mx = self.num("foodMax", 1500) or 1500
         food = d.get("food") or {}
-        out = [{"type": "label", "label": tr("Сытость", "Ситість")}, self.sat_bar(size=16),
-               {"type": "label", "label": tr("Питание", "Харчування")},
-               {"type": "bar", "label": tr("Всё вместе", "Усе разом"), "max": mx * 5, "size": 14, "text": "",
+        out = [{"type": "label", "label": tr("Satiety", "Ситість")}, self.sat_bar(size=16),
+               {"type": "label", "label": tr("Nutrition", "Харчування")},
+               {"type": "bar", "label": tr("Everything", "Усе разом"), "max": mx * 5, "size": 14, "text": "",
                 "parts": [{"value": food.get(k, 0), "color": c, "label": tr(ru, uk)} for k, ru, uk, c in FOOD]}]
         out += [{"type": "bar", "label": tr(ru, uk), "value": food.get(k, 0), "max": mx, "color": c, "size": 10,
                  "text": f'{food.get(k, 0) / mx * 100:.0f}%'} for k, ru, uk, c in FOOD]
@@ -430,31 +437,31 @@ class Plugin:
         if not storm:
             st, sub = "—", ""
         elif storm.get("on") is False:
-            st, sub = tr("выкл", "вимк"), tr("в этом мире штормов нет", "у цьому світі штормів немає")
+            st, sub = tr("off", "вимк"), tr("no storms in this world", "у цьому світі штормів немає")
         elif storm.get("active"):
-            st, sub = tr("сейчас", "зараз"), tr("темпоральный шторм идёт", "темпоральний шторм триває")
+            st, sub = tr("now", "зараз"), tr("temporal storm in progress", "темпоральний шторм триває")
         else:
             hrs = max(0.0, float(storm.get("days") or 0) * hpd)
-            st = f"{hrs / hpd:.1f} {tr('дн', 'дн')}" if hrs >= hpd else f"{hrs:.0f} {tr('ч', 'год')}"
-            sub = tr("до темпорального шторма", "до темпорального шторму")
+            st = f"{hrs / hpd:.1f} {tr('d', 'дн')}" if hrs >= hpd else f"{hrs:.0f} {tr('h', 'год')}"
+            sub = tr("until the temporal storm", "до темпорального шторму")
         stab = self.num("stability", 1.0)
         return [
             {"type": "grid", "cols": 3, "items": [
-                {"type": "stat", "icon": "🌡", "label": tr("Тело", "Тіло"), "value": f"{temp:.1f}", "unit": "°C",
+                {"type": "stat", "icon": "🌡", "label": tr("Body", "Тіло"), "value": f"{temp:.1f}", "unit": "°C",
                  "color": "#E07A4F" if temp > 37.5 else "#7FB2D9" if temp < 35.5 else "#E8D9B5"},
-                {"type": "stat", "icon": "☁", "label": tr("Воздух", "Повітря"), "value": f'{self.num("air"):g}' if "air" in d else "—", "unit": "°C"},
-                {"type": "stat", "icon": "🌧", "label": tr("Погода", "Погода"), "value": tr(*pr),
-                 "sub": tr("ветер ", "вітер ") + f'{self.num("wind"):.1f}' if "wind" in d else ""},
-                {"type": "stat", "icon": "🕑", "label": f'{self.season()}, {tr("день", "день")} {d.get("day", "?")}',
+                {"type": "stat", "icon": "☁", "label": tr("Air", "Повітря"), "value": f'{self.num("air"):g}' if "air" in d else "—", "unit": "°C"},
+                {"type": "stat", "icon": "🌧", "label": tr("Weather", "Погода"), "value": tr(*pr),
+                 "sub": tr("wind ", "вітер ") + f'{self.num("wind"):.1f}' if "wind" in d else ""},
+                {"type": "stat", "icon": "🕑", "label": f'{self.season()}, {tr("day", "день")} {d.get("day", "?")}',
                  "value": d.get("time", "—"), "sub": str(d.get("date") or "")},
-                {"type": "stat", "icon": "🌀", "label": tr("Шторм", "Шторм"), "value": st, "sub": sub,
+                {"type": "stat", "icon": "🌀", "label": tr("Storm", "Шторм"), "value": st, "sub": sub,
                  "color": "#C8432F" if storm.get("active") else ""},
-                {"type": "stat", "icon": "⏳", "label": tr("Стабильность", "Стабільність"), "value": f"{stab * 100:.0f}", "unit": "%",
+                {"type": "stat", "icon": "⏳", "label": tr("Stability", "Стабільність"), "value": f"{stab * 100:.0f}", "unit": "%",
                  "color": "#C8432F" if stab < 0.25 else "#D9B26A" if stab < 0.6 else ""}]},
-            {"type": "label", "label": tr("Позиция", "Позиція")},
+            {"type": "label", "label": tr("Position", "Позиція")},
             {"type": "grid", "cols": 3, "items": [
                 {"type": "stat", "label": a.upper(), "value": f'{d[a]:g}' if isinstance(d.get(a), (int, float)) else "—"} for a in ("x", "y", "z")]},
-            {"type": "bar", "label": tr("Темпоральная стабильность", "Темпоральна стабільність"), "value": stab * 100, "max": 100,
+            {"type": "bar", "label": tr("Temporal stability", "Темпоральна стабільність"), "value": stab * 100, "max": 100,
              "color": "#6FA8DC", "text": f"{stab * 100:.0f}%", "size": 10},
         ]
 
@@ -463,7 +470,7 @@ class Plugin:
         tr, snr = self.api.tr, self.data.get("snrs")
         if not isinstance(snr, dict) or not snr.get("zones"):
             return [self.hp_bar(size=16), {"type": "label", "label": tr(
-                "S&R System (0.5.0+) в игре не найден — показываю только здоровье",
+                "S&R System (0.5.0+) not found in the game — showing health only",
                 "S&R System (0.5.0+) у грі не знайдено — показую лише здоров'я")}]
         if (snr.get("format") or 0) >= 3:
             return self.health07(snr)
@@ -529,7 +536,7 @@ class Plugin:
         else:
             hpbar = self.hp_bar(size=12)
         ov = snr.get("overall") or {}
-        left = [hpbar, {"type": "label", "style": "bold", "label": (texts.get("overall") or tr("Общее состояние", "Загальний стан"))
+        left = [hpbar, {"type": "label", "style": "bold", "label": (texts.get("overall") or tr("Overall condition", "Загальний стан"))
                         + ": " + str(ov.get("text", "")), **self.col(ov.get("color"))},
                 {"type": "shapes", "vw": 150, "vh": 290, "fill": True, "h": 250, "items": doll}]      # во всю высоту (старый дек — 250)
         right = self.zone07(zones[self.zone], snr, texts) if self.zone is not None else self.overview07(snr, zones, texts)
@@ -554,19 +561,19 @@ class Plugin:
         hurt = sorted((z for z in zones.values() if z.get("status") not in (None, "healthy")),
                       key=lambda z: (-(z.get("severity") or 0), z.get("id", 0)))
         if not hurt:
-            out.append({"type": "label", "style": "line", "color": "#88CC88", "label": texts.get("healthy") or tr("Травм нет", "Травм немає")})
+            out.append({"type": "label", "style": "line", "color": "#88CC88", "label": texts.get("healthy") or tr("No injuries", "Травм немає")})
         for z in hurt:
             b = z.get("badge") or {}
             out.append({"type": "card", "id": f'zone:{z["id"]}', "items": [
                 {"type": "label", "style": "bold", "label": z.get("name", ""), "color": "#E8D9B5"},
                 {"type": "label", "style": "line", "label": z.get("sub", ""), **self.col(b.get("color"), "#A8977A")}]})
-        out.append({"type": "label", "label": texts.get("conditions") or tr("Условия восстановления", "Умови відновлення")})
+        out.append({"type": "label", "label": texts.get("conditions") or tr("Recovery conditions", "Умови відновлення")})
         out += self.lines(snr.get("conditions"))
         if snr.get("bonuses"):
-            out.append({"type": "label", "label": texts.get("bonuses") or tr("Бонусы", "Бонуси")})
+            out.append({"type": "label", "label": texts.get("bonuses") or tr("Bonuses", "Бонуси")})
             out += self.lines(snr["bonuses"])
         out.append({"type": "label", "style": "line", "color": "#9A9080",
-                    "label": texts.get("hint") or tr("Тап по зоне — её травмы и лечение", "Тап по зоні — її травми й лікування")})
+                    "label": texts.get("hint") or tr("Tap a zone — its injuries and treatment", "Тап по зоні — її травми й лікування")})
         return out
 
     def zone07(self, z, snr, texts):
@@ -577,7 +584,7 @@ class Plugin:
                {"type": "label", "style": "bold", "label": b.get("text", ""), **self.col(b.get("color"))}]
         injs = [i for i in z.get("injuries") or [] if isinstance(i, dict) and isinstance(i.get("card"), dict)]
         if not injs:
-            return out + [{"type": "label", "style": "line", "color": "#88CC88", "label": texts.get("zoneHealthy") or tr("Зона здорова", "Зона здорова")}]
+            return out + [{"type": "label", "style": "line", "color": "#88CC88", "label": texts.get("zoneHealthy") or tr("Zone is healthy", "Зона здорова")}]
         injs.sort(key=lambda i: -(i["card"].get("severity") or 0))
         zid = z["id"]
         types = [i["type"] for i in injs]
@@ -595,7 +602,7 @@ class Plugin:
                 {"type": "label", "style": "bold", "label": c.get("subtitle", ""), "color": "#4A3A28"}]
         card += self.lines(c.get("desc"), ink)
         card.append({"type": "label", "style": "line", "color": "#2B1F14",
-                     "label": f'{texts.get("recovery") or tr("Восстановление", "Відновлення")}: {c.get("percent") or 0}%'})
+                     "label": f'{texts.get("recovery") or tr("Recovery", "Відновлення")}: {c.get("percent") or 0}%'})
         card.append({"type": "bar", "value": c.get("percent") or 0, "max": 100, "size": 10, "text": " ",
                      "color": "#8A1A10" if inj.get("blocked") else "#5E8A3A"})
         card += self.lines(c.get("recovery"), ink)
@@ -604,7 +611,7 @@ class Plugin:
         out.append({"type": "card", "bg": "#D8C8A4", "items": card})
         key = f'{zid}|{inj["type"]}'
         # основное лечение
-        out.append({"type": "label", "label": texts.get("mandatory") or tr("Основное лечение", "Основне лікування")})
+        out.append({"type": "label", "label": texts.get("mandatory") or tr("Main treatment", "Основне лікування")})
         if not c.get("mandatory"):
             out.append({"type": "label", "style": "line", "color": "#B8B0A0", "label": texts.get("mandatoryNone") or "—"})
         for m in c.get("mandatory") or []:
@@ -620,7 +627,7 @@ class Plugin:
         for d in c.get("done") or []:
             out.append({"type": "label", "style": "line", "label": "✓ " + str(d), "color": "#A8D890"})
         # дополнительные средства
-        out.append({"type": "label", "label": texts.get("optional") or tr("Дополнительные средства", "Додаткові засоби")})
+        out.append({"type": "label", "label": texts.get("optional") or tr("Optional treatment", "Додаткові засоби")})
         if not c.get("optional"):
             out.append({"type": "label", "style": "line", "color": "#B8B0A0", "label": texts.get("optionalNone") or "—"})
         for n, o in enumerate(c.get("optional") or []):
@@ -634,7 +641,7 @@ class Plugin:
                 out.append({"type": "card", "items": self.lines(o.get("tip"))})
         t = snr.get("target") or {}
         if not t.get("self", True) and not t.get("inRange", True):
-            out.append({"type": "label", "style": "line", "color": "#FF8080", "label": texts.get("tooFar") or tr("Подойди ближе", "Підійди ближче")})
+            out.append({"type": "label", "style": "line", "color": "#FF8080", "label": texts.get("tooFar") or tr("Get closer", "Підійди ближче")})
         return out
 
     def who(self, snr):
@@ -644,18 +651,17 @@ class Plugin:
         if not players and not self.target:
             return []
         t = snr.get("target") or {}
-        items = [{"type": "button", "id": "who:0", "label": tr("Я", "Я"), "on": not self.target}]
+        items = [{"type": "button", "id": "who:0", "label": tr("Me", "Я"), "on": not self.target}]
         for p in players[:5]:
             inj = p.get("injuries") or 0
             items.append({"type": "button", "id": f'who:{p["id"]}', "on": p["id"] == self.target,
-                          "label": f'{p.get("name", "?")} · {inj if inj else "✓"} · {p.get("dist", 0):g} м'})
+                          "label": f'{p.get("name", "?")} · {inj if inj else "✓"} · {p.get("dist", 0):g} {tr("m", "м")}'})
         out = [{"type": "row", "items": items}]
         if self.target and not t.get("self") and not t.get("inRange"):
             out.append({"type": "label", "style": "line", "color": "#FF8080", "label": tr(
-                f'{t.get("name", "")} далеко ({t.get("dist", 0):g} м) — подойди ближе {t.get("range", 3.5):g} м, чтобы лечить',
-                f'{t.get("name", "")} далеко ({t.get("dist", 0):g} м) — підійди ближче {t.get("range", 3.5):g} м, щоб лікувати')})
+                "{0} is too far ({1:g} m) — get closer than {2:g} m to treat", "{0} далеко ({1:g} м) — підійди ближче {2:g} м, щоб лікувати", t.get('name', ''), t.get('dist', 0), t.get('range', 3.5))})
         elif self.target and t.get("self") and not t.get("lost"):
-            out.append({"type": "label", "style": "line", "color": "#A8977A", "label": tr("Загружаю…", "Завантажую…")})
+            out.append({"type": "label", "style": "line", "color": "#A8977A", "label": tr("Loading…", "Завантажую…")})
         return out
 
     def bars(self):
@@ -674,32 +680,32 @@ class Plugin:
             if key == "mine":
                 label = what + ("" if a.get("self") else f' ({a.get("patient", "")})')
             else:
-                label = tr(f'{a.get("healer", "?")} лечит тебя: ', f'{a.get("healer", "?")} лікує тебе: ') + what
+                label = tr("{0} is treating you: ", "{0} лікує тебе: ", a.get('healer', '?')) + what
             out.append({"type": "bar", "icon": "✚", "label": label, "value": done, "max": dur, "size": 10,
-                        "color": "#7FB2D9" if key == "mine" else "#D9B26A", "text": f"{done:.1f} / {dur:.1f} с"})
+                        "color": "#7FB2D9" if key == "mine" else "#D9B26A", "text": f"{done:.1f} / {dur:.1f} {tr('s', 'с')}"})
         return out
 
     def summary(self, snr, zones, texts):
         """Общее состояние, как в игре без выбранной зоны: травмы по тяжести, выздоровление, питание, бонусы."""
         tr = self.api.tr
-        out = [{"type": "label", "label": texts.get("status") or tr("Состояние", "Стан")}]
+        out = [{"type": "label", "label": texts.get("status") or tr("Condition", "Стан")}]
         hurt = []
         for z in zones.values():
             for inj in z.get("injuries") or []:
                 hurt.append((z.get("severity", 0), z, inj))
         if not hurt:
             out.append({"type": "label", "style": "line", "color": "#88CC88",
-                        "label": texts.get("healthy") or tr("Травм нет", "Травм немає")})
+                        "label": texts.get("healthy") or tr("No injuries", "Травм немає")})
         for _, z, inj in sorted(hurt, key=lambda x: (-x[0], x[1].get("id", 0))):
-            mark = f' ({texts.get("bleedingShort") or tr("кровотечение", "кровотеча")})' if inj.get("bleeding") else " (!)" if inj.get("blocked") else ""
+            mark = f' ({texts.get("bleedingShort") or tr("bleeding", "кровотеча")})' if inj.get("bleeding") else " (!)" if inj.get("blocked") else ""
             col = inj["color"] if str(inj.get("color", "")).startswith("#") and len(inj["color"]) == 7 else None
             out.append({"type": "label", "style": "line", "label": f'• {z.get("name", "")}: {inj.get("stageName", "")}{mark}',
                         **({"color": col} if col else {})})
         out += [self.line(x) for x in snr.get("summary") or []]
         if snr.get("bonuses"):
-            out += [{"type": "label", "label": texts.get("bonuses") or tr("Бонусы", "Бонуси")}] + [self.line(x) for x in snr["bonuses"]]
+            out += [{"type": "label", "label": texts.get("bonuses") or tr("Bonuses", "Бонуси")}] + [self.line(x) for x in snr["bonuses"]]
         out.append({"type": "label", "style": "line", "color": "#A8977A",
-                    "label": tr("Тап по зоне — её травмы и лечение", "Тап по зоні — її травми й лікування")})
+                    "label": tr("Tap a zone — its injuries and treatment", "Тап по зоні — її травми й лікування")})
         return out
 
     def line(self, x, **kw):
@@ -710,7 +716,7 @@ class Plugin:
         tr = self.api.tr
         out = [{"type": "label", "label": z.get("name") or "?"}]
         if not z.get("injuries"):
-            return out + [{"type": "label", "style": "line", "label": texts.get("zoneHealthy") or tr("Здорова", "Здорова"), "color": "#88CC88"}]
+            return out + [{"type": "label", "style": "line", "label": texts.get("zoneHealthy") or tr("Healthy", "Здорова"), "color": "#88CC88"}]
         zid = z["id"]
         for inj in z["injuries"]:
             card = [{"type": "label", "style": "line", "label": f'{inj.get("stageName", "")} ({inj.get("typeName", "")})',
@@ -738,13 +744,14 @@ class Plugin:
     def hotkeys(self):
         tr, keys = self.api.tr, self.keys()
         out = [{"type": "row", "items": [
-            {"type": "label", "label": tr("Свои кнопки для игры", "Свої кнопки для гри")},
-            {"type": "button", "id": "hkNew", "icon": "plus", "label": tr("Новая", "Нова")},
-            {"type": "button", "id": "hkEdit", "icon": "edit", "label": tr("Готово", "Готово") if self.edit else tr("Изменить", "Змінити"),
+            {"type": "label", "label": tr("Your buttons for the game", "Свої кнопки для гри")},
+            {"type": "button", "id": "hkNew", "icon": "plus", "label": tr("New", "Нова")},
+            {"type": "button", "id": "hkEdit", "icon": "edit", "label": tr("Done", "Готово") if self.edit else tr("Edit", "Змінити"),
              "on": self.edit}]}]
         if not keys:
             out.append({"type": "label", "label": tr(
-                "Пока пусто. «Новая» — кнопка: команды игры (/home, .команда, «слот 3») или скрипт дека (клавиши).",
+                "Empty so far. «New» — a button: game commands (/home, .command, «slot 3») or a deck "
+                "script (keys).",
                 "Поки порожньо. «Нова» — кнопка: команди гри (/home, .команда, «слот 3») або скрипт дека (клавіші).")})
             return out
         out.append({"type": "grid", "cols": 3, "items": [
@@ -753,18 +760,18 @@ class Plugin:
              "on": self.edit and i == self.pick} for i, k in enumerate(keys)]})
         if self.edit and 0 <= self.pick < len(keys):
             k = keys[self.pick]
-            out += [{"type": "input", "id": "hkName", "label": tr("Название", "Назва"), "placeholder": k.get("name", ""),
-                     "value": k.get("name", ""), "button": tr("Переименовать", "Перейменувати")},
-                    {"type": "select", "id": "hkKind", "label": tr("Что делает", "Що робить"), "value": k.get("kind", "game"),
-                     "options": [{"value": "game", "label": tr("Команды игры (через мод)", "Команди гри (через мод)")},
-                                 {"value": "keys", "label": tr("Скрипт дека (клавиши)", "Скрипт дека (клавіші)")}]},
-                    {"type": "textarea", "id": "hkText", "rows": 5, "value": k.get("text", ""), "button": tr("Сохранить", "Зберегти"),
-                     "placeholder": "/home\nслот 3" if k.get("kind") != "keys" else "e\nпауза 200\nctrl+1",
-                     "label": tr("По строке: /команда, .команда клиента, «слот 3»", "По рядку: /команда, .команда клієнта, «слот 3»")
-                     if k.get("kind") != "keys" else tr("Как кнопка-скрипт дека: клавиши жмутся в активное окно (игра)",
+            out += [{"type": "input", "id": "hkName", "label": tr("Name", "Назва"), "placeholder": k.get("name", ""),
+                     "value": k.get("name", ""), "button": tr("Rename", "Перейменувати")},
+                    {"type": "select", "id": "hkKind", "label": tr("What it does", "Що робить"), "value": k.get("kind", "game"),
+                     "options": [{"value": "game", "label": tr("Game commands (through the mod)", "Команди гри (через мод)")},
+                                 {"value": "keys", "label": tr("Deck script (keys)", "Скрипт дека (клавіші)")}]},
+                    {"type": "textarea", "id": "hkText", "rows": 5, "value": k.get("text", ""), "button": tr("Save", "Зберегти"),
+                     "placeholder": tr("/home\nslot 3", "/home\nслот 3") if k.get("kind") != "keys" else tr("e\nwait 200\nctrl+1", "e\nпауза 200\nctrl+1"),
+                     "label": tr("One per line: /command, .client command, «slot 3»", "По рядку: /команда, .команда клієнта, «слот 3»")
+                     if k.get("kind") != "keys" else tr("Like a deck script button: keys are pressed into the active window (the game)",
                                                          "Як кнопка-скрипт дека: клавіші тиснуться в активне вікно (гра)")},
-                    {"type": "button", "id": "hkDel", "label": tr("Удалить кнопку", "Видалити кнопку"), "style": "dashed"}]
+                    {"type": "button", "id": "hkDel", "label": tr("Delete the button", "Видалити кнопку"), "style": "dashed"}]
         else:
-            out.append({"type": "label", "label": tr("⚑ — команды игры через мод; без значка — клавиши (игра должна быть активным окном)",
+            out.append({"type": "label", "label": tr("⚑ — game commands through the mod; no mark — keys (the game must be the active window)",
                                                      "⚑ — команди гри через мод; без значка — клавіші (гра має бути активним вікном)")})
         return out

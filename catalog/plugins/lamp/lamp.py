@@ -317,7 +317,7 @@ class Lamp:
                         "sudo ./system-setup.sh (или sudo usermod -aG dialout $USER), потом перезайди в систему", perm)
             return False
         self._push(status="busy" if busy else "none", port=busy)
-        log.info("Лампа не найдена (проверено портов: %d%s)", len(order), i18n.tr(", занят ", ", зайнятий ") + str(busy) if busy else "")
+        log.info("Лампа не найдена (проверено портов: %d%s)", len(order), i18n.tr(", busy ", ", зайнятий ") + str(busy) if busy else "")
         return False
 
     def _hotplug(self):

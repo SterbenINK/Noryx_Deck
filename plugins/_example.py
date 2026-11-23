@@ -3,9 +3,10 @@
 дека, в разделе «Плагины», появится «Счётчик», а в доке — его блок. Удалишь файл — всё пропадёт.
 Подробно — plugins/README.txt."""
 
-NAME = {"ru": "Счётчик", "uk": "Лічильник"}
-ABOUT = {"ru": "Образец плагина: кнопки, ползунок, переключатель, плитка", "uk": "Зразок плагіна: кнопки, повзунок, перемикач, плитка"}
+NAME = {"en": "Counter", "uk": "Лічильник"}
+ABOUT = {"en": "Sample plugin: buttons, slider, toggle, tile", "uk": "Зразок плагіна: кнопки, повзунок, перемикач, плитка"}
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = []                               # ничего особенного не нужно
 
 
@@ -27,23 +28,23 @@ class Plugin:
         tr, c = self.api.tr, self.api.cfg
         return {
             "dock": [
-                {"type": "text", "label": tr("Счёт", "Рахунок"), "value": c["n"]},
+                {"type": "text", "label": tr("Count", "Рахунок"), "value": c["n"]},
                 {"type": "row", "items": [
                     {"type": "button", "id": "minus", "label": "−"},
                     {"type": "button", "id": "plus", "icon": "plus"},      # только значок
                 ]},
-                {"type": "slider", "id": "step", "label": tr("Шаг", "Крок"), "value": c["step"], "min": 1, "max": 10},
+                {"type": "slider", "id": "step", "label": tr("Step", "Крок"), "value": c["step"], "min": 1, "max": 10},
             ],
             "settings": [
                 {"type": "row", "items": [
-                    {"type": "text", "label": tr("Счёт", "Рахунок"), "value": c["n"]},
-                    {"type": "button", "id": "reset", "label": tr("Сбросить", "Скинути")},
+                    {"type": "text", "label": tr("Count", "Рахунок"), "value": c["n"]},
+                    {"type": "button", "id": "reset", "label": tr("Reset", "Скинути")},
                 ]},
-                {"type": "toggle", "id": "loud", "label": tr("Подсказка на каждое нажатие", "Підказка на кожне натискання"),
+                {"type": "toggle", "id": "loud", "label": tr("A hint on every press", "Підказка на кожне натискання"),
                  "on": c["loud"]},
             ],
             "tiles": [
-                {"id": "plus", "label": tr("Счётчик +", "Лічильник +"), "icon": "plus", "sub": str(c["n"]), "on": c["n"] > 0},
+                {"id": "plus", "label": tr("Counter +", "Лічильник +"), "icon": "plus", "sub": str(c["n"]), "on": c["n"] > 0},
             ],
         }
 
@@ -56,7 +57,7 @@ class Plugin:
             c["n"] -= c["step"]
         elif aid == "reset":
             c["n"] = 0
-            self.api.event(self.api.tr("Счётчик сброшен", "Лічильник скинуто"))
+            self.api.event(self.api.tr("Counter reset", "Лічильник скинуто"))
         elif aid == "step":
             c["step"] = int(value)
         elif aid == "loud":

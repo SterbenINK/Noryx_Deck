@@ -15,24 +15,26 @@
 import ast
 from pathlib import Path
 
+import i18n
+
 API_VERSION = 2          # версия API плагинов этого дека (2 — живой поток stream: api.frame / viewers / input)
 API_MIN = 1              # плагины с версией ниже уже не запускаются
 
-# ключ → (ru, uk, описание ru, описание uk, риск: 2 — высокий)
+# ключ → (en, uk, описание en, описание uk, риск: 2 — высокий); английский — основа и ключ пакета языка
 PERMS = {
-    "input":   ("Клавиатура и мышь", "Клавіатура й миша", "нажимать клавиши, кликать, скрипты дека",
+    "input":   ("Keyboard and mouse", "Клавіатура й миша", "press keys, click, deck scripts",
                 "натискати клавіші, клікати, скрипти деку", 2),
-    "launch":  ("Запуск программ", "Запуск програм", "запускать программы и команды на ПК",
+    "launch":  ("Launching apps", "Запуск програм", "launch programs and commands on the PC",
                 "запускати програми й команди на ПК", 2),
-    "native":  ("Системные вызовы", "Системні виклики", "напрямую звать Windows / системные библиотеки (ctypes)",
+    "native":  ("System calls", "Системні виклики", "call Windows / system libraries directly (ctypes)",
                 "напряму викликати Windows / системні бібліотеки (ctypes)", 2),
-    "screen":  ("Экран", "Екран", "снимать картинку с экрана ПК", "знімати картинку з екрана ПК", 2),
-    "files":   ("Файлы", "Файли", "читать и писать файлы вне своей папки", "читати й писати файли поза своєю текою", 1),
-    "network": ("Сеть", "Мережа", "соединения по сети и с интернетом", "з'єднання мережею та з інтернетом", 1),
-    "devices": ("Устройства", "Пристрої", "COM / USB / Bluetooth, мониторы, Arduino", "COM / USB / Bluetooth, монітори, Arduino", 1),
-    "audio":   ("Звук", "Звук", "доступ к аудиосистеме", "доступ до аудіосистеми", 1),
-    "windows": ("Окна", "Вікна", "управлять окнами программ", "керувати вікнами програм", 1),
-    "system":  ("Сведения о системе", "Відомості про систему", "читать нагрузку, температуры, процессы",
+    "screen":  ("Screen", "Екран", "capture the PC screen", "знімати картинку з екрана ПК", 2),
+    "files":   ("Files", "Файли", "read and write files outside its folder", "читати й писати файли поза своєю текою", 1),
+    "network": ("Network", "Мережа", "network and internet connections", "з'єднання мережею та з інтернетом", 1),
+    "devices": ("Devices", "Пристрої", "COM / USB / Bluetooth, monitors, Arduino", "COM / USB / Bluetooth, монітори, Arduino", 1),
+    "audio":   ("Sound", "Звук", "access to the audio system", "доступ до аудіосистеми", 1),
+    "windows": ("Windows", "Вікна", "manage app windows", "керувати вікнами програм", 1),
+    "system":  ("System info", "Відомості про систему", "read load, temperatures, processes",
                 "читати навантаження, температури, процеси", 0),
 }
 ORDER = list(PERMS)
@@ -59,9 +61,14 @@ SNIFF_CALLS = {               # атрибут вызова → разрешен
 DEPRECATED = {}
 
 
+def about(key, lang):
+    p = PERMS.get(key)
+    return (p[3] if lang == "uk" else i18n.PACK.get(p[2], p[2])) if p else ""
+
+
 def label(key, lang):
     p = PERMS.get(key)
-    return (p[1] if lang == "uk" else p[0]) if p else key
+    return (p[1] if lang == "uk" else i18n.PACK.get(p[0], p[0])) if p else key
 
 
 def clean_perms(v):

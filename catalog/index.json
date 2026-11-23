@@ -1,14 +1,69 @@
 {
+ "langs": {
+  "de": {
+   "name": "Deutsch",
+   "sha256": "6374ac3ed8d8c9326009ff131120dcbfb5a6fbaa53a2a680316d0a101fa9e334",
+   "size": 110829,
+   "version": "1.0.0"
+  },
+  "en-GB": {
+   "name": "English (UK)",
+   "sha256": "e2a966ad0a60de79eb6a4f6f2b63f232d2b3932ed3cd23bcb1d2b430c26cb64c",
+   "size": 4364,
+   "version": "1.0.0"
+  },
+  "es": {
+   "name": "Español",
+   "sha256": "97bd452e6f0337426a6e668f8312dd76b6b0dc11d2506a891e8fb12f2b69c406",
+   "size": 111788,
+   "version": "1.0.0"
+  },
+  "fr": {
+   "name": "Français",
+   "sha256": "60c78c414274ffbc493c61f825abbaba8cf4da5feba403fedd2416b2298d9746",
+   "size": 114615,
+   "version": "1.0.0"
+  },
+  "it": {
+   "name": "Italiano",
+   "sha256": "7923e82487457bb8c3c4a3b805107dc2e5f17a63f327c728d2db195312006eec",
+   "size": 110672,
+   "version": "1.0.0"
+  },
+  "ja": {
+   "name": "日本語",
+   "sha256": "a684a6372f6e7cf74be724bc388dc462c550619e99e0c057d2163358cec0150e",
+   "size": 124963,
+   "version": "1.0.0"
+  },
+  "ko": {
+   "name": "한국어",
+   "sha256": "f28a8f1fc2e33209792018c80f7269a94421c21bad029e28625ac8fb77796b27",
+   "size": 112486,
+   "version": "1.0.0"
+  },
+  "zh": {
+   "name": "中文",
+   "sha256": "25d01c6dd6088ba4e19c507c3e2cf65f10b01b5e93cdb1ef99f8a964ad759bb8",
+   "size": 103880,
+   "version": "1.0.0"
+  }
+ },
  "mods": {
   "dashboard": {
    "about": {
-    "ru": "Главный экран — сетка панелей, как у умного дома: время, сцены-режимы, плитки, плеер, мониторинг, хоткеи; док спрятан. Пример мода компоновки (без кода): поменять — «Моды» → «Новый вид» → «Компоновка».",
+    "en": "The home screen as a grid of panels, like a smart home: time, scene modes, tiles, player, monitoring, hotkeys; the dock is hidden. A sample layout mod (no code): change it in «Mods» → «New look» → «Layout».",
     "uk": "Головний екран — сітка панелей, як у розумного дому: час, сцени-режими, плитки, плеєр, моніторинг, хоткеї; док сховано. Приклад мода компонування (без коду): змінити — «Моди» → «Новий вигляд» → «Компонування»."
    },
    "changes": [
     [
+     "1.1.0",
+     "English is now the main language, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.0",
-     "Первая версия",
+     "First version",
      "Перша версія"
     ]
    ],
@@ -16,8 +71,8 @@
    "files": [
     {
      "p": "mod.json",
-     "sha256": "91bd22e33e49a5926f2ad04681fc7050e60fd069ff052c72e4efcf93222128cb",
-     "size": 2048
+     "sha256": "7f39407e2f72887f01920893ac4376ad2972be41d2a8ba267f623a7d56c72a0d",
+     "size": 2900
     },
     {
      "p": "style.css",
@@ -25,21 +80,30 @@
      "size": 310
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Панель управления",
+    "en": "Control panel",
     "uk": "Панель керування"
    },
-   "version": "1.0.0"
+   "version": "1.1.0"
   },
   "focus": {
    "about": {
-    "ru": "Пример мода с кодом: своя панель «Фокус-таймер» (25 / 5 минут) для компоновки и подсказка при смене режима. Показывает DeckAPI — как моды вмешиваются в работу дека.",
+    "en": "A sample mod with code: its own «Focus timer» panel (25 / 5 minutes) for layouts and a hint when the mode changes. Shows DeckAPI — how mods step into the deck's work.",
     "uk": "Приклад мода з кодом: своя панель «Фокус-таймер» (25 / 5 хвилин) для компонування й підказка при зміні режиму. Показує DeckAPI — як моди втручаються в роботу дека."
    },
    "changes": [
     [
+     "1.1.0",
+     "English is now the main language, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.0",
-     "Первая версия",
+     "First version",
      "Перша версія"
     ]
    ],
@@ -47,30 +111,39 @@
    "files": [
     {
      "p": "mod.js",
-     "sha256": "d780959813da6a8983a6f943ea1174b43167c549f7b52a84b081505c1b43e288",
-     "size": 3239
+     "sha256": "0d1b8367b4ba3385d8a87c5be2c3437a09a04bad5d3387f89a7b043d697d4a90",
+     "size": 3163
     },
     {
      "p": "mod.json",
-     "sha256": "12619df36e748509af06b0488f67f8b59f3623171eb7f010b140d6462df9b611",
-     "size": 832
+     "sha256": "9ad2760941f42415fb0322bd12a039a1c408f9f2cab297b7a6dc35fb1b519071",
+     "size": 1045
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Фокус-таймер",
+    "en": "Focus timer",
     "uk": "Фокус-таймер"
    },
-   "version": "1.0.0"
+   "version": "1.1.0"
   },
   "warm": {
    "about": {
-    "ru": "Тёплые цвета и мягкие скруглённые плитки — пример мода вида",
+    "en": "Warm colors and soft rounded tiles — a sample look mod",
     "uk": "Теплі кольори й м'які заокруглені плитки — приклад мода вигляду"
    },
    "changes": [
     [
+     "1.1.0",
+     "English is now the main language, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.0",
-     "Первая версия",
+     "First version",
      "Перша версія"
     ]
    ],
@@ -78,8 +151,8 @@
    "files": [
     {
      "p": "mod.json",
-     "sha256": "368657b3362a9a6253fcae2da7810f06d717c92f92a4018eaa463c1a8af762dc",
-     "size": 672
+     "sha256": "61e9c7c55ae29c7dae0dbd5fb28c84d3eaebab15a9f78699b0e9d9dc8319933b",
+     "size": 967
     },
     {
      "p": "style.css",
@@ -87,41 +160,54 @@
      "size": 416
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Тёплый графит",
+    "en": "Warm graphite",
     "uk": "Теплий графіт"
    },
-   "version": "1.0.0"
+   "version": "1.1.0"
   }
  },
  "plugins": {
   "discord": {
    "about": {
-    "ru": "Выключить микрофон и звук Discord, не открывая его окно (через API Discord, как Stream Deck)",
+    "en": "Mute Discord's mic and sound without opening its window (through the Discord API, like Stream Deck)",
     "uk": "Вимкнути мікрофон і звук Discord, не відкриваючи його вікно (через API Discord, як Stream Deck)"
    },
    "api": 2,
    "changes": [
     [
+     "1.1.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.0",
-     "Первая версия в каталоге: микрофон и звук Discord через его локальный API",
+     "First version in the catalog: Discord mic and sound through its local API",
      "Перша версія в каталозі: мікрофон і звук Discord через його локальний API"
     ]
    ],
    "files": [
     {
      "p": "discord_rpc.py",
-     "sha256": "3b01ecf6b20d86971dda83710abd062c08292735a12852407d10c32122806cce",
-     "size": 8641
+     "sha256": "3809b955edf852151c5b54f3ccf81bf3904c3f4c46de2a0c4c308b6d5c778d4a",
+     "size": 8558
     },
     {
      "p": "plugin.py",
-     "sha256": "42ad504227858a69251e1fc5d0e3c9134934c0e279b1c57569883e742a12ab72",
-     "size": 15295
+     "sha256": "53c61f7aeef39bbbb5ac2596cd44276ddac9ba5bc752de8b21a996f00012dced",
+     "size": 15486
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Discord (микрофон и звук)",
+    "en": "Discord (mic and sound)",
     "uk": "Discord (мікрофон і звук)"
    },
    "os": [],
@@ -129,53 +215,72 @@
     "network",
     "native"
    ],
-   "version": "1.0.0"
+   "version": "1.1.0"
   },
   "factorio": {
    "about": {
-    "ru": "Статистика завода: электричество, загрязнение, производство, наука, враги — графики. Нужен мод игры Noryx Link",
+    "en": "Factory stats: electricity, pollution, production, science, enemies — charts. Needs the Noryx Link game mod",
     "uk": "Статистика заводу: електрика, забруднення, виробництво, наука, вороги — графіки. Потрібен мод гри Noryx Link"
    },
    "api": 2,
    "changes": [
     [
+     "1.1.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.0",
-     "Первая версия в каталоге: электричество, производство, наука, графики",
+     "First version in the catalog: electricity, production, science, charts",
      "Перша версія в каталозі: електрика, виробництво, наука, графіки"
     ]
    ],
    "files": [
     {
      "p": "plugin.py",
-     "sha256": "18ebda3c650669c0e471448b30002db1d317056a9173cadab03697426cf9f55e",
-     "size": 17197
+     "sha256": "f6504def9e3e66e3515c659c12c7172e7940ec44f7ab2ca971a1449af88c0b0d",
+     "size": 17025
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Factorio",
+    "en": "Factorio",
     "uk": "Factorio"
    },
    "os": [],
    "perms": [
     "files"
    ],
-   "version": "1.0.0"
+   "version": "1.1.0"
   },
   "lamp": {
    "about": {
-    "ru": "Яркость лампы на Arduino: ползунок в доке, шаг сценария «лампа 60»",
+    "en": "Arduino lamp brightness: a slider in the dock, scenario step «lamp 60»",
     "uk": "Яскравість лампи на Arduino: повзунок у доці, крок сценарію «лампа 60»"
    },
    "api": 2,
    "changes": [
     [
+     "1.1.1",
+     "Instructions (README) in English",
+     "Інструкція (README) — англійською й українською"
+    ],
+    [
+     "1.1.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.1",
-     "Инструкция — в README плагина",
+     "Instructions — in the plugin README",
      "Інструкція — у README плагіна"
     ],
     [
      "1.0.0",
-     "Первая версия в каталоге (раньше шла в сборке дека)",
+     "First version in the catalog (used to ship with the deck)",
      "Перша версія в каталозі (раніше йшла в збірці дека)"
     ]
    ],
@@ -187,8 +292,8 @@
     },
     {
      "p": "README.txt",
-     "sha256": "b880771fe493423ae18471867f4cad6ea5bcaf119c4e5190890162bbeb447f2e",
-     "size": 2004
+     "sha256": "10cfffe38e7d3f7601d7316ce208c8773d3bdcc14f38d4f7ef2d22098077b00e",
+     "size": 1373
     },
     {
      "p": "README_UA.txt",
@@ -197,17 +302,21 @@
     },
     {
      "p": "lamp.py",
-     "sha256": "18fcefaf864d0e8d624c58a87c8713fa24aaaf8e94e38429a9395e967efb5e72",
-     "size": 15537
+     "sha256": "071cff23c49216f355427a5c27e9672d955c750735cbb90eb8dc0baf3cf4f8ee",
+     "size": 15531
     },
     {
      "p": "plugin.py",
-     "sha256": "f2a213806ae4586877f5063f1f7dbd886efbe43720dd06920e199a0d342234d4",
-     "size": 8025
+     "sha256": "adc2f5cee49522c6214a18ed00ed8cd3f1f476ad91721303046825fb59f0c2cf",
+     "size": 8564
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Лампа (Arduino)",
+    "en": "Lamp (Arduino)",
     "uk": "Лампа (Arduino)"
    },
    "os": [],
@@ -215,31 +324,41 @@
     "devices",
     "launch"
    ],
-   "version": "1.0.1"
+   "version": "1.1.1"
   },
   "monitor": {
    "about": {
-    "ru": "Яркость, контраст и цвета монитора с дека, пресеты одной кнопкой",
+    "en": "Monitor brightness, contrast and colors from the deck, presets in one tap",
     "uk": "Яскравість, контраст і кольори монітора з дека, пресети однією кнопкою"
    },
    "api": 2,
    "changes": [
     [
+     "1.1.1",
+     "Instructions (README) in English",
+     "Інструкція (README) — англійською й українською"
+    ],
+    [
+     "1.1.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.1",
-     "Инструкция — в README плагина",
+     "Instructions — in the plugin README",
      "Інструкція — у README плагіна"
     ],
     [
      "1.0.0",
-     "Первая версия в каталоге: яркость, контраст, цвета, пресеты",
+     "First version in the catalog: brightness, contrast, colors, presets",
      "Перша версія в каталозі: яскравість, контраст, кольори, пресети"
     ]
    ],
    "files": [
     {
      "p": "README.txt",
-     "sha256": "56cf0185ba68b3dc4eae32ba6ccbf43342b5d7e5a7c13f00d3ad308ad3d64669",
-     "size": 1157
+     "sha256": "8ee3b39c891d37a39909ddaf6a630e3e8bbf44b495d293ba78708787651b0a88",
+     "size": 794
     },
     {
      "p": "README_UA.txt",
@@ -248,17 +367,21 @@
     },
     {
      "p": "ddc.py",
-     "sha256": "9cc6dc356847547fc03ba51ad07399bb656fe74bd31c8e3487d3ffa860af1406",
-     "size": 8068
+     "sha256": "a23e74d74c1be4d216e1d4bc25aca8bd048ddc1f1e4611153beeced7281fbc86",
+     "size": 7993
     },
     {
      "p": "plugin.py",
-     "sha256": "b74c8539b4f809b4e2a247d306253b649c1618a4c9e308f0fa75de3e52761fac",
-     "size": 14574
+     "sha256": "1ddc0f59a91b27f5cf1f44ccef8e1c9b087cd100279e0275658c80fc95e19ac0",
+     "size": 15068
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Монитор (DDC/CI)",
+    "en": "Monitor (DDC/CI)",
     "uk": "Монітор (DDC/CI)"
    },
    "os": [],
@@ -267,35 +390,44 @@
     "native",
     "launch"
    ],
-   "version": "1.0.1"
+   "version": "1.1.1"
   },
   "satisfactory": {
    "about": {
-    "ru": "Статистика завода: электричество, батареи, производство, AWESOME Sink — графики. Нужен мод игры Ficsit Remote Monitoring",
+    "en": "Factory stats: electricity, batteries, production, AWESOME Sink — charts. Needs the Ficsit Remote Monitoring game mod",
     "uk": "Статистика заводу: електрика, батареї, виробництво, AWESOME Sink — графіки. Потрібен мод гри Ficsit Remote Monitoring"
    },
    "api": 2,
    "changes": [
     [
+     "1.2.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.1.0",
-     "Токен FRM (API Authentication Token): поле в настройках, сам читает из конфига мода; свой адрес не отвечает — ищет FRM на других портах; причина «нет связи» — в логе дека",
+     "FRM token (API Authentication Token): a field in settings, read from the mod config automatically; if its own address doesn't answer — looks for FRM on other ports; the «no connection» reason — in the deck log",
      "Токен FRM (API Authentication Token): поле в налаштуваннях, сам читає з конфігу мода; своя адреса не відповідає — шукає FRM на інших портах; причина «немає зв'язку» — у лозі дека"
     ],
     [
      "1.0.0",
-     "Первая версия в каталоге: данные из Ficsit Remote Monitoring",
+     "First version in the catalog: data from Ficsit Remote Monitoring",
      "Перша версія в каталозі: дані з Ficsit Remote Monitoring"
     ]
    ],
    "files": [
     {
      "p": "plugin.py",
-     "sha256": "58bd0fb52fc853fb01d2e2a543cab3f153cef44596116896dd8df306e979db8d",
-     "size": 33531
+     "sha256": "35885e4f3f71ae9395366d10644d1a4b28d8916dc3e9e714cd27149b15966ef0",
+     "size": 33228
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Satisfactory",
+    "en": "Satisfactory",
     "uk": "Satisfactory"
    },
    "os": [],
@@ -303,26 +435,31 @@
     "network",
     "files"
    ],
-   "version": "1.1.0"
+   "version": "1.2.0"
   },
   "screen2": {
    "about": {
-    "ru": "Телефон — второй монитор ПК (нужен драйвер Virtual Display Driver). Только Windows",
+    "en": "The phone as a second PC monitor (needs the Virtual Display Driver). Windows only",
     "uk": "Телефон — другий монітор ПК (потрібен драйвер Virtual Display Driver). Тільки Windows"
    },
    "api": 2,
    "changes": [
     [
+     "1.1.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.0.0",
-     "Первая версия в каталоге: телефон — второй монитор",
+     "First version in the catalog: the phone as a second monitor",
      "Перша версія в каталозі: телефон — другий монітор"
     ]
    ],
    "files": [
     {
      "p": "plugin.py",
-     "sha256": "c91633ffe4288480e372bd37a87878a8a6246b76d3fe9d27fddab3b239bdcaa2",
-     "size": 15833
+     "sha256": "f23bdcb5383ae9b314bfbd2bdce0e26ffceea36edf7739ec4748c2693f47afb0",
+     "size": 15916
     },
     {
      "p": "wincap.py",
@@ -330,8 +467,12 @@
      "size": 11663
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Второй экран",
+    "en": "Second screen",
     "uk": "Другий екран"
    },
    "os": [
@@ -342,41 +483,51 @@
     "input",
     "native"
    ],
-   "version": "1.0.0"
+   "version": "1.1.0"
   },
   "vintage": {
    "about": {
-    "ru": "Режим игры: здоровье и лечение (S&R System), питание, мир, хоткеи. Нужен мод игры Noryx Link",
+    "en": "Game mode: health and treatment (S&R System), nutrition, world, hotkeys. Needs the Noryx Link game mod",
     "uk": "Режим гри: здоров'я й лікування (S&R System), харчування, світ, хоткеї. Потрібен мод гри Noryx Link"
    },
    "api": 2,
    "changes": [
     [
+     "1.4.1",
+     "Instructions (README) in English",
+     "Інструкція (README) — англійською й українською"
+    ],
+    [
+     "1.4.0",
+     "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+     "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"
+    ],
+    [
      "1.3.0",
-     "Команды игре — с ключом мода Noryx Link 0.3.0 (без него мод их не выполнит); нужно разрешение «Файлы»",
+     "Commands to the game — with the Noryx Link 0.3.0 mod key (without it the mod won't run them); needs the «Files» permission",
      "Команди грі — з ключем мода Noryx Link 0.3.0 (без нього мод їх не виконає); потрібен дозвіл «Файли»"
     ],
     [
      "1.2.0",
-     "Кукла во всю высоту, на ней только значки мода; иконки травм как в игре; название травмы крупнее, шрифт толще; вышли из игры — значения сбрасываются",
+     "Full-height doll with only the mod's marks; injury icons as in the game; bigger injury name, bolder font; leaving the game resets the values",
      "Лялька на всю висоту, на ній лише значки мода; іконки травм як у грі; назва травми більша, шрифт товщий; вийшли з гри — значення скидаються"
     ],
     [
      "1.1.0",
-     "Здоровье как во вкладке S&R 0.7: отметки зон на кукле, общее состояние, карточка травмы, основное и дополнительное лечение с подсказками (нужен S&R 0.7.18+)",
+     "Health like the S&R 0.7 tab: zone marks on the doll, overall condition, injury card, main and optional treatment with tips (needs S&R 0.7.18+)",
      "Здоров'я як у вкладці S&R 0.7: позначки зон на ляльці, загальний стан, картка травми, основне й додаткове лікування з підказками (потрібен S&R 0.7.18+)"
     ],
     [
      "1.0.0",
-     "Первая версия в каталоге: здоровье (S&R), сытость, мир, хоткеи",
+     "First version in the catalog: health (S&R), satiety, world, hotkeys",
      "Перша версія в каталозі: здоров'я (S&R), ситість, світ, хоткеї"
     ]
    ],
    "files": [
     {
      "p": "README.txt",
-     "sha256": "dc28f4785ec5e50273b63e83fb6d6d51c34105a5d3277dd8ad80de29789e7ebd",
-     "size": 4503
+     "sha256": "d4b1c21a974392a36c03947c1d719ca26afb9679f9a89d7f6c8eb939cb694dc2",
+     "size": 3176
     },
     {
      "p": "README_UA.txt",
@@ -425,12 +576,16 @@
     },
     {
      "p": "plugin.py",
-     "sha256": "751d87ed711ab5cd5114fa6bb84aa37066b4f899e0be5cd05e006d1f7c9830c3",
-     "size": 52724
+     "sha256": "ad82364abf2227b8671d1ce59506888a3f53dfc94c0b31b6407b9d93d9d81432",
+     "size": 52047
     }
    ],
+   "langs": [
+    "en",
+    "uk"
+   ],
    "name": {
-    "ru": "Vintage Story",
+    "en": "Vintage Story",
     "uk": "Vintage Story"
    },
    "os": [],
@@ -439,7 +594,7 @@
     "input",
     "files"
    ],
-   "version": "1.3.0"
+   "version": "1.4.1"
   }
  },
  "v": 2

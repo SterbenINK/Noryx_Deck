@@ -1,39 +1,39 @@
-VINTAGE STORY НА ДЕКЕ
-=====================
+VINTAGE STORY ON THE DECK
+=========================
 
-Свой режим «Vintage Story» и блок в доке: здоровье и лечение (мод S&R System), сытость и питание, мир
-(температура, погода, время, позиция, темпоральный шторм), свои кнопки для игры.
+Its own «Vintage Story» mode and a dock block: health and treatment (the S&R System mod), satiety and nutrition, world
+(temperature, weather, time, position, temporal storm), your own buttons for the game.
 
-ЧТО НУЖНО
-1. Плагин дека: скопируй эту папку (vintage) в plugins/ дека. Настройки → «Плагины»: общий переключатель
-   и «Vintage Story» — включены. На главном экране появится режим «Vintage Story».
-2. Мод игры «Noryx Link» (только клиент, на сервер не нужен): claudedecklink_0.3.0.zip — в
-   VintagestoryData/Mods. Он шлёт данные деку по UDP 127.0.0.1:47811 и принимает команды на 127.0.0.1:47812 —
-   игра и дек должны быть на одном ПК. Команды мод выполняет только с ключом из VintagestoryData/ModConfig/
-   claudedecklink.json (создаёт сам при первом запуске; дек читает его сам — нужно разрешение «Файлы»). Дек не нашёл
-   файл (своя папка игры) — укажи её в pluginCfg.vintage.dataDir.
-3. Травмы и лечение — мод S&R System 0.5.0+ (на клиенте и сервере); лечение других игроков и полоса лечения —
-   0.6.2+; вкладка «Здоровье» как в игре 0.7 — 0.7.18+. Без него — только здоровье.
+WHAT YOU NEED
+1. The deck plugin: copy this folder (vintage) into the deck's plugins/ (or Settings → «Plugins» → «Catalog»).
+   Settings → «Plugins»: the master switch and «Vintage Story» — on. The «Vintage Story» mode appears on the home screen.
+2. The «Noryx Link» game mod (client only, not needed on the server): claudedecklink_0.3.0.zip — into
+   VintagestoryData/Mods. It sends data to the deck over UDP 127.0.0.1:47811 and takes commands on 127.0.0.1:47812 —
+   the game and the deck must be on the same PC. The mod runs commands only with the key from VintagestoryData/ModConfig/
+   claudedecklink.json (it creates it itself on the first run; the deck reads it itself — needs the «Files» permission).
+   The deck didn't find the file (your own game folder) — set it in pluginCfg.vintage.dataDir.
+3. Injuries and treatment — the S&R System mod 0.5.0+ (on client and server); treating other players and the treatment bar —
+   0.6.2+; the «Health» tab like in the game 0.7 — 0.7.18+. Without it — health only.
 
-РЕЖИМ
-Слева — четыре кнопки: Здоровье, Сытость, Температура, Хоткеи. Справа — меню выбранной.
-• Здоровье — как меню S&R в игре: кукла из шести зон (цвет — тяжесть, повязка, шина, капля — кровотечение,
-  «!» — без лечения не заживёт). Тап по зоне — её травмы и лечение: кнопка — лучшим предметом,
-  стрелка — выбрать предмет. Чем кончилось — подсказкой (ответ сервера). Повторный тап по зоне или тап
-  мимо кнопок — общее состояние, как в игре (травмы по тяжести, выздоровление, питание, бонусы).
-  Кого лечить: «Я» или игроки в 5 блоках (сколько травм и как далеко). K в игре на игроке — дек сам
-  переключит на него; закрыл окно или отошёл — назад к себе. Дальше 3,5 блока лечить нельзя (подсказка).
-  Полосы лечения: твоё (кого и чем) и то, что делает над тобой другой игрок.
-• Сытость — общая полоса и по видам еды.
-• Температура — тело, воздух, погода, время и дата, до шторма, стабильность, позиция.
-• Хоткеи — свои кнопки. «Новая» → «Изменить»: название, что делает и текст:
-    Команды игры (через мод, игра может быть не в фокусе): по строке — /команда, .команда клиента, «слот 3»
-    (слот хотбара), «; комментарий».
-    Скрипт дека (клавиши): как кнопка-скрипт дека — ctrl+c / пауза 500 / текст … / держать w 1500;
-    клавиши идут в окно, активное на ПК (игра должна быть на переднем плане).
-Блок в доке (здоровье, сытость, день и время) — тап открывает режим.
+THE MODE
+On the left — four buttons: Health, Satiety, Temperature, Hotkeys. On the right — the menu of the chosen one.
+• Health — like the S&R menu in the game: a doll of six zones (color — severity, bandage, splint, drop — bleeding,
+  «!» — won't heal without treatment). Tap a zone — its injuries and treatment: the button — with the best item,
+  the arrow — pick an item. How it ended — in a hint (the server's answer). Tap the zone again or tap
+  past the buttons — the overall condition, like in the game (injuries by severity, recovery, nutrition, bonuses).
+  Whom to treat: «Me» or players within 5 blocks (how many injuries and how far). K on a player in the game — the deck
+  switches to them by itself; closed the window or walked away — back to yourself. Beyond 3.5 blocks you can't treat (a hint).
+  Treatment bars: yours (whom and with what) and what another player is doing on you.
+• Satiety — the overall bar and by food type.
+• Temperature — body, air, weather, time and date, until the storm, stability, position.
+• Hotkeys — your own buttons. «New» → «Edit»: name, what it does and the text:
+    Game commands (through the mod, the game may be out of focus): one per line — /command, .client command, «slot 3»
+    (a hotbar slot), «; comment».
+    Deck script (keys): like a deck script button — ctrl+c / wait 500 / text … / hold w 1500;
+    the keys go to the window active on the PC (the game must be in front).
+The dock block (health, satiety, day and time) — a tap opens the mode.
 
-МОД ИГРЫ (game-mod/)
-Исходники Noryx Link: dotnet build -c Release (путь к игре — переменная VINTAGE_STORY,
-по умолчанию ~/Games/VintageStory) → release/claudedecklink_<версия>.zip.
-S&R System даёт для него публичные DeckStateJson() / DeckTreat(...) — мост зовёт их рефлексией.
+THE GAME MOD (game-mod/)
+Noryx Link sources: dotnet build -c Release (the game path — the VINTAGE_STORY variable,
+~/Games/VintageStory by default) → release/claudedecklink_<version>.zip.
+S&R System gives it public DeckStateJson() / DeckTreat(...) — the bridge calls them by reflection.

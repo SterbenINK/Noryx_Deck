@@ -24,6 +24,8 @@ import sys
 import time
 from pathlib import Path, PurePosixPath
 
+import i18n
+import langs as langsmod
 import perms
 import update as updmod
 
@@ -44,7 +46,7 @@ MAX_TOTAL = 48 * 1024 * 1024
 KEEP = 3                                          # копий прежних версий на плагин
 CHECK_EVERY = 6 * 3600
 OS_NAME = "windows" if sys.platform == "win32" else "linux"
-META = ("NAME", "ABOUT", "VERSION", "API", "PERMS", "CHANGES", "OS", "DEFAULT_ON")
+META = ("NAME", "ABOUT", "VERSION", "API", "PERMS", "CHANGES", "OS", "DEFAULT_ON", "LANGS")
 
 
 # ---------- описание плагина и версии ----------
@@ -84,9 +86,17 @@ def clean_changes(v):
     return out[:30]
 
 
-def text(v, lang):
+def langs_of(v):
+    """LANGS плагина / "langs" мода: коды языков его собственных текстов (первый — основной)."""
+    return [x for x in dict.fromkeys(v if isinstance(v, (list, tuple)) else []) if isinstance(x, str) and x in i18n.NAMES]
+
+
+def text(v, lang, pid=""):
+    if lang == i18n.LANG:                         # язык дека — свой текст, перевод из мовного пакета или английский
+        return i18n.ptext(pid, v)
     if isinstance(v, dict):
-        return str(v.get(lang) or v.get("ru") or next(iter(v.values()), ""))
+        return str(v.get(lang) or v.get("en") or (v.get("uk") if lang == "uk" else None) or v.get("ru")
+                   or next(iter(v.values()), ""))
     return str(v or "")
 
 
@@ -117,7 +127,7 @@ def mod_meta(path):
 
 
 def build_index(repo=ROOT):
-    out = {"v": 2, "plugins": {}, "mods": {}}
+    out = {"v": 2, "plugins": {}, "mods": {}, "langs": langsmod.build_index(repo)}
     for kind, (src, main) in KINDS.items():
         base = Path(repo) / src
         if not base.is_dir():
@@ -135,11 +145,13 @@ def build_index(repo=ROOT):
                                           "version": str(m.get("VERSION") or ""), "api": m.get("API") or 1,
                                           "perms": [p for p in m.get("PERMS") or [] if p in perms.PERMS],
                                           "os": [o for o in m.get("OS") or [] if o in ("windows", "linux")],
+                                          "langs": langs_of(m.get("LANGS")),
                                           "changes": clean_changes(m.get("CHANGES")), "files": files}
             else:
                 m = mod_meta(d / main)
                 out["mods"][d.name] = {"name": m.get("name") or d.name, "about": m.get("about") or "",
                                        "version": str(m.get("version") or ""), "code": bool(m.get("js") or (d / "mod.js").is_file()),
+                                       "langs": langs_of(m.get("langs")),
                                        "changes": clean_changes(m.get("changes")), "files": files}
     return out
 
@@ -180,6 +192,7 @@ def clean_index(data):
                                     "perms": [p for p in m.get("perms") or [] if p in perms.PERMS] if kind == "plugin" else [],
                                     "os": [o for o in m.get("os") or [] if o in ("windows", "linux")] if kind == "plugin" else [],
                                     "code": bool(m.get("code")) if kind == "mod" else False,
+                                    "langs": langs_of(m.get("langs")),
                                     "changes": clean_changes(m.get("changes")), "files": files}
     return out
 
@@ -189,7 +202,8 @@ class Center:
     def __init__(self, deck, root=ROOT):
         self.deck = deck
         self.root = Path(root)
-        self.mods, self.sha, self.checked, self.error = {}, "", 0.0, ""     # mods: ключ «вид:id» → запись индекса
+        self.mods, self.sha, self.checked, self.error = {}, "", 0.0, ""
+        self.langs = {}                # мовні пакети из индекса: код → {name, version, size, sha256}
         self.busy = {}                 # ключ → install | rollback
         self.lock = asyncio.Lock()
         self.told = set()              # о каких обновлениях уже сказали (ключ@версия)
@@ -266,10 +280,12 @@ class Center:
             if m:
                 state = "new" if have is None else "update" if newer(m["version"], have) else \
                     "newer" if newer(have, m["version"]) else "same"
-                it.update(name=text(m["name"], lang) or pid, about=text(m["about"], lang), version=m["version"],
+                it.update(name=text(m["name"], lang, pid) or pid, about=text(m["about"], lang, pid), version=m["version"],
+                          langs=m.get("langs") or [], langOk=i18n.speaks(pid, m.get("langs")),
                           state=state, why=self.why(m), os=m["os"], api=m["api"], code=m["code"],
                           perms=[{"k": k, "label": perms.label(k, lang), "risk": perms.PERMS[k][4]} for k in m["perms"]],
-                          changes=[{"v": v, "text": uk if lang == "uk" else ru} for v, ru, uk in m["changes"]
+                          changes=[{"v": v, "text": i18n.ptr(pid, base, uk) if lang == i18n.LANG else uk if lang == "uk" else base}
+                                   for v, base, uk in m["changes"]
                                    if have is None or newer(v, have)][:8],
                           size=sum(f["size"] for f in m["files"]))
             else:
@@ -298,6 +314,7 @@ class Center:
         try:
             sha, data = await loop.run_in_executor(None, fetch)
             self.mods, self.sha, self.error = clean_index(data), sha, ""
+            self.langs = langsmod.clean_index(data)       # мовні пакети — страница «Мови»
         except updmod.UpdateError as e:
             self.error = "private" if e.code == "notfound" and not token else e.code
             log.warning("Каталог плагинов: %s", e)
@@ -306,12 +323,14 @@ class Center:
             log.warning("Каталог плагинов: %s", e)
         self.checked = time.time()
         await self.push()
+        if hasattr(self.deck, "langs_msg"):
+            await self.deck.broadcast(self.deck.langs_msg())
         new = [k for k in self.updates() if f"{k}@{self.mods[k]['version']}" not in self.told]
         if new:
             self.told |= {f"{k}@{self.mods[k]['version']}" for k in new}
             lang = self.host.lang()
-            names = ", ".join(f"{text(self.mods[k]['name'], lang)} {self.mods[k]['version']}" for k in new)
-            await self.deck.event("update", self.deck.tr("Обновления в каталоге: ", "Оновлення в каталозі: ") + names,
+            names = ", ".join(f"{text(self.mods[k]['name'], lang, k.split(':', 1)[1])} {self.mods[k]['version']}" for k in new)
+            await self.deck.event("update", self.deck.tr("Catalog updates: ", "Оновлення в каталозі: ") + names,
                                   level="update", notify=quiet, link="settings")
 
     async def loop(self):
@@ -462,10 +481,10 @@ class Center:
             return "io"
         log.info("Каталог: «%s» %s → %s", pid, old if old else "—", m["version"])
         await self._rescan(kind)
-        name = text(m["name"], self.host.lang())
-        what = (self.deck.tr("Плагин", "Плагін") if kind == "plugin" else self.deck.tr("Мод", "Мод")) + " "
-        await self.deck.event("update", what + (self.deck.tr("обновлён: ", "оновлено: ") if old is not None else
-                                                self.deck.tr("установлен: ", "встановлено: ")) + f"{name} {m['version']}")
+        name = text(m["name"], self.host.lang(), pid)
+        what = (self.deck.tr("Plugin", "Плагін") if kind == "plugin" else self.deck.tr("Mod", "Мод")) + " "
+        await self.deck.event("update", what + (self.deck.tr("updated: ", "оновлено: ") if old is not None else
+                                                self.deck.tr("installed: ", "встановлено: ")) + f"{name} {m['version']}")
         return ""
 
     # ---------- откатить ----------
@@ -500,7 +519,7 @@ class Center:
                 self._restore_cfg(kind, pid, saved)
                 log.info("Каталог: «%s» откатан к %s", pid, info.get("version") or name)
                 await self._rescan(kind)
-                await self.deck.event("update", self.deck.tr("Откатил: ", "Відкотив: ") + f"{pid} {info.get('version') or ''}".strip())
+                await self.deck.event("update", self.deck.tr("Rolled back: ", "Відкотив: ") + f"{pid} {info.get('version') or ''}".strip())
                 return ""
             except OSError as e:
                 log.warning("Каталог: «%s» не откатился: %s", pid, e)

@@ -209,7 +209,7 @@ def toggle_mic():
     m = _mic()
     new = 0 if m.GetMute() else 1
     m.SetMute(new, None)
-    log.info("Микрофон: %s", i18n.tr("выкл", "вимк") if new else i18n.tr("вкл", "увімк"))
+    log.info("Микрофон: %s", i18n.tr("off", "вимк") if new else i18n.tr("on", "увімк"))
     return bool(new)
 
 

@@ -89,7 +89,7 @@ class Pipe:
             finally:
                 self.sock.setblocking(False)
         else:
-            raise RPCError("нет связи с Discord")
+            raise RPCError("no connection to Discord")
 
     def _read_some(self, timeout):
         """Дочитать в буфер, что пришло (ждать не дольше timeout). False — канал закрыт."""
@@ -138,7 +138,7 @@ class Pipe:
             if fr:
                 return fr
             if not self._read_some(max(0.0, end - time.monotonic())):
-                raise RPCError("Discord закрыл соединение")
+                raise RPCError("Discord closed the connection")
             fr = self._frame()
             if fr:
                 return fr
@@ -176,11 +176,11 @@ class Client:
                 continue
             op, msg = got
             if op == OP_CLOSE:
-                raise RPCError(msg.get("message") or "Discord отказал в подключении", msg.get("code", 0))
+                raise RPCError(msg.get("message") or "Discord refused the connection", msg.get("code", 0))
             if msg.get("evt") == "READY":
                 self.user = (msg.get("data") or {}).get("user")
                 return True
-        raise RPCError("Discord не ответил на подключение")
+        raise RPCError("Discord didn't answer the connection")
 
     def poll(self, timeout=0.0):
         """Обработать, что пришло само (события, ping)."""
@@ -193,7 +193,7 @@ class Client:
         if op == OP_PING:
             self.pipe.send(OP_PONG, msg)
         elif op == OP_CLOSE:
-            raise RPCError(msg.get("message") or "Discord закрыл соединение", msg.get("code", 0))
+            raise RPCError(msg.get("message") or "Discord closed the connection", msg.get("code", 0))
         elif msg.get("cmd") == "DISPATCH":
             self.on_event(msg.get("evt"), msg.get("data") or {})
 
@@ -212,10 +212,10 @@ class Client:
             if msg.get("nonce") == nonce:
                 if msg.get("evt") == "ERROR":
                     d = msg.get("data") or {}
-                    raise RPCError(d.get("message") or "ошибка Discord", d.get("code", 0))
+                    raise RPCError(d.get("message") or "Discord error", d.get("code", 0))
                 return msg.get("data") or {}
             self._other(op, msg)
-        raise RPCError(f"Discord не ответил на {cmd}")
+        raise RPCError(f"Discord didn't answer {cmd}")
 
     def close(self):
         try:

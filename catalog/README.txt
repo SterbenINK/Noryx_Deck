@@ -1,59 +1,68 @@
-КАТАЛОГ: ПЛАГИНЫ И МОДЫ (НЕ ИЗ КОМПЛЕКТА)
-=========================================
+CATALOG: PLUGINS AND MODS (NOT IN THE BUILD)
+============================================
 
-Два разных вида:
-  плагин (plugins/) — своя программа на ПК: лампа, игры, монитор, Discord. Ставится в папку plugins/ дека.
-  мод    (mods/)    — изменение самого дека: вид (цвета, формы, шрифты — CSS и переменные) и функции страницы (JS).
-                      Ставится в папку mods/ дека; дек показывает «было / стало» и даёт выбрать.
-В сборку дека они не входят: их ставят только те, кому нужно. Проще всего с деки: Настройки → «Плагины» или «Моды» →
-«Каталог» → «Установить» (там же «Обновить» и «Откатить»). Или вручную — скопировать папку в plugins/ или mods/ дека.
-Поменял плагин или мод — подними версию, допиши CHANGES и пересобери индекс: python server/catalog.py index.
-Удалить — «Удалить» на карточке (плагин) / выключить (мод) или удалить папку. Обновление дека их не трогает.
+Two different kinds:
+  plugin (plugins/) — its own program on the PC: lamp, games, monitor, Discord. Goes into the deck's plugins/ folder.
+  mod    (mods/)    — a change to the deck itself: the look (colors, shapes, fonts — CSS and variables) and page features (JS).
+                      Goes into the deck's mods/ folder; the deck shows «before / after» and lets you choose.
+They aren't part of the deck build: only those who need them install them. Easiest from the deck: Settings → «Plugins» or
+«Mods» → «Catalog» → «Install» (there too — «Update» and «Roll back»). Or manually — copy the folder into the deck's
+plugins/ or mods/.
+Changed a plugin or mod — raise its version, add to CHANGES and rebuild the index: python server/catalog.py index.
+Remove — «Delete» on the card or delete the folder. A deck update doesn't touch them.
 
-МОДЫ (mods/):
-dashboard/ — «Панель управления»: главный экран — сетка панелей, док спрятан (компоновка без кода).
-focus/     — «Фокус-таймер»: мод с кодом — своя панель для компоновки, перехват сообщений (пример DeckAPI).
-warm/      — «Тёплый графит»: тёплые цвета и скруглённые плитки — пример мода вида (mod.json + style.css).
+MODS (mods/):
+dashboard/ — «Control panel»: the home screen as a grid of panels, the dock hidden (a layout without code).
+focus/     — «Focus timer»: a mod with code — its own panel for layouts, message interception (a DeckAPI sample).
+warm/      — «Warm graphite»: warm colors and rounded tiles — a sample look mod (mod.json + style.css).
 
-ПЛАГИНЫ (plugins/):
+PLUGINS (plugins/):
 
-lamp/     — «Лампа (Arduino)»: яркость настольной лампы на Arduino + XY-MOS ползунком в доке, шаг сценария
-            «лампа 60». Скетч — lamp/ClaudeLamp; подключение — в README.txt дека.
-monitor/  — «Монитор (DDC/CI)»: яркость, контраст и цвета монитора с дека, пресеты одной кнопкой (Windows — без
-            библиотек, Linux — нужен ddcutil). В меню монитора включи DDC/CI.
-discord/  — «Discord (микрофон и звук)»: выключить микрофон / звук Discord с дека, не открывая его окно (игра не
-            сворачивается) — через локальный API Discord, как Elgato Stream Deck. Один раз: своё приложение на
+lamp/     — «Lamp (Arduino)»: desk lamp brightness on an Arduino + XY-MOS with a slider in the dock, the scenario step
+            «lamp 60». The sketch — lamp/ClaudeLamp; wiring — in lamp/README.txt.
+monitor/  — «Monitor (DDC/CI)»: monitor brightness, contrast and colors from the deck, presets in one tap (Windows — no
+            libraries, Linux — needs ddcutil). Turn DDC/CI on in the monitor menu.
+discord/  — «Discord (mic and sound)»: mute Discord's microphone / sound from the deck without opening its window (the game
+            doesn't minimize) — through Discord's local API, like Elgato Stream Deck. Once: your own app at
             discord.com/developers/applications (New Application → OAuth2: Client ID, Reset Secret → Client Secret,
-            Redirects — http://localhost → Save), оба значения — в Настройки → «Плагины» → Discord (удобнее с ПК:
-            открой http://127.0.0.1:8765 в браузере), «Подключить» → в Discord «Авторизовать». Кнопки — на плитке
-            Discord (вместо сочетаний клавиш), в доке и плитки «Микрофон» / «Звук».
-vintage/  — «Vintage Story»: свой режим игры — здоровье и лечение (мод S&R System), сытость, мир, хоткеи.
-            Нужен мод игры Noryx Link (в папке, только клиент). Подробности — vintage/README.txt.
-factorio/ — «Factorio»: режим со статистикой завода — электричество, загрязнение, производство, наука, враги;
-            графики за 1 мин / 10 мин / 1 ч / 10 ч и «топы». В деку — папка factorio (plugin.py); в игру (Factorio 2.1,
-            Space Age тоже) — мод game-mod/claude-deck-link (или claude-deck-link_0.1.4.zip) в папку mods игры
-            (Windows — %APPDATA%\Factorio\mods). Мод раз в 5 с пишет script-output/claude-deck/factorio.json.
-satisfactory/ — «Satisfactory»: режим со статистикой завода — электричество, батареи, производство, AWESOME Sink;
-            графики за 1 мин / 10 мин / 1 ч / 10 ч и «топы». Свой мод игры не нужен: данные даёт мод Ficsit Remote
-            Monitoring (поставить через Satisfactory Mod Manager), в игре — /frm http start (или автозапуск веб-сервера
-            в настройках мода). В деку — папка satisfactory. Другой порт / ПК — в настройках плагина.
-screen2/   — «Второй экран»: телефон — второй монитор ПК (только Windows). Нужен драйвер виртуального монитора —
-            один раз, от администратора: winget install --id=VirtualDrivers.Virtual-Display-Driver -e
-            (монитор для Windows подключён всегда). Режим «Второй экран» — картинка на весь экран телефона, пальцем —
-            касания Windows (или мышь — в настройках плагина); щипок — на главный дека (монитор не отключается, просто
-            картинка не идёт), развёл — обратно. Пока он открыт, телефон не засыпает. В деку — папка screen2.
+            Redirects — http://localhost → Save), both values — into Settings → «Plugins» → Discord (easier from the PC:
+            open http://127.0.0.1:8765 in a browser), «Connect» → «Authorize» in Discord. The buttons — on the Discord
+            tile (instead of key combinations), in the dock and the «Microphone» / «Sound» tiles.
+vintage/  — «Vintage Story»: its own game mode — health and treatment (the S&R System mod), satiety, world, hotkeys.
+            Needs the Noryx Link game mod (in the folder, client only). Details — vintage/README.txt.
+factorio/ — «Factorio»: a mode with factory stats — electricity, pollution, production, science, enemies;
+            charts for 1 min / 10 min / 1 h / 10 h and «tops». Into the deck — the factorio folder (plugin.py); into the
+            game (Factorio 2.1, Space Age too) — the game-mod/claude-deck-link mod (or claude-deck-link_0.1.4.zip) into
+            the game's mods folder (Windows — %APPDATA%\Factorio\mods). Every 5 s the mod writes
+            script-output/claude-deck/factorio.json.
+satisfactory/ — «Satisfactory»: a mode with factory stats — electricity, batteries, production, AWESOME Sink;
+            charts for 1 min / 10 min / 1 h / 10 h and «tops». No game mod of its own: the data comes from the Ficsit
+            Remote Monitoring mod (install it via Satisfactory Mod Manager), in the game — /frm http start (or web server
+            autostart in the mod settings). Into the deck — the satisfactory folder. Another port / PC — in the plugin
+            settings.
+screen2/  — «Second screen»: the phone as a second PC monitor (Windows only). Needs a virtual monitor driver —
+            once, as administrator: winget install --id=VirtualDrivers.Virtual-Display-Driver -e
+            (the monitor is always connected for Windows). The «Second screen» mode — the picture on the whole phone
+            screen, the finger — Windows touches (or a mouse — in the plugin settings); pinch — to the deck's home
+            (the monitor isn't disconnected, the picture just stops), spread — back. While it's open the phone doesn't
+            sleep. Into the deck — the screen2 folder.
 
-Как писать свои — plugins/README.txt.
+How to write your own — plugins/README.txt.
 
-МОД С КОДОМ: window.DeckAPI (mod.js)
-  DeckAPI.on("message", m => …)     — каждое сообщение ПК; вернул false — дек его не обработает (перехват)
-  DeckAPI.on("press", e => …)       — нажатие плитки {mode, index, item}; false — не нажимать
-  DeckAPI.on("render:home" | "render:mode" | "render:dock" | "render:layout", el => …) — после отрисовки
-  DeckAPI.panel("вид", {name:{ru, uk}, opts:[{k, label, def}], render(el, opts, ctx)}) — своя панель для компоновки
-  DeckAPI.home(el => …)             — свой главный экран целиком (вернул false — обычный)
-  DeckAPI.act(имя, данные) / send(сообщение) / toast(текст) / openMode(id) / goHome() / css(текст) / render()
-  DeckAPI.S (состояние, только читать), T(рус, укр), esc(текст), icons
-  Права роли телефона проверяет ПК — мод с кодом не обойдёт их. Пример — mods/focus.
-КОМПОНОВКА (mod.json → "layout"): {"cols": 12, "rows": 6, "gap": 10, "dock": false, "panels": [{"id", "kind", "x", "y",
-  "w", "h", "title", "opts"}]}; kind: top, stats, media, clock, p:<плагин>, time, modes, tiles {mode, size}, text {text, size},
-  image {src}, spacer и свои из DeckAPI.panel. Пример — mods/dashboard.
+LANGUAGES: every catalog plugin has LANGS = ["en", "uk"] (which languages its texts are in, the first is the main one),
+a mod has "langs": ["en", "uk"] in mod.json; NAME / ABOUT / name / about — {"en": …, "uk": …}. Other languages come from
+the deck's language packs (catalog/langs/<code>.json → "plugins": {"<id>": {English text: translation}}); plugin lines to
+translate — python server/langs.py plugins. The title and text of a layout panel can also be {"en": …, "uk": …}.
+
+A MOD WITH CODE: window.DeckAPI (mod.js)
+  DeckAPI.on("message", m => …)     — every message from the PC; returned false — the deck won't handle it (interception)
+  DeckAPI.on("press", e => …)       — a tile press {mode, index, item}; false — don't press
+  DeckAPI.on("render:home" | "render:mode" | "render:dock" | "render:layout", el => …) — after drawing
+  DeckAPI.panel("kind", {name:{en, uk}, opts:[{k, label, def}], render(el, opts, ctx)}) — its own panel for layouts
+  DeckAPI.home(el => …)             — its own whole home screen (returned false — the usual one)
+  DeckAPI.act(name, data) / send(message) / toast(text) / openMode(id) / goHome() / css(text) / render()
+  DeckAPI.S (state, read only), T(en, uk), esc(text), icons
+  The phone's role rights are checked by the PC — a mod with code can't bypass them. Sample — mods/focus.
+LAYOUT (mod.json → "layout"): {"cols": 12, "rows": 6, "gap": 10, "dock": false, "panels": [{"id", "kind", "x", "y",
+  "w", "h", "title", "opts"}]}; kind: top, stats, media, clock, p:<plugin>, time, modes, tiles {mode, size}, text {text, size},
+  image {src} and your own from DeckAPI.panel. Sample — mods/dashboard.

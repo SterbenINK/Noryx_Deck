@@ -1,91 +1,92 @@
-NORYX — стрим-дек на телефоне для твоего ПК
-Нужно: Windows 10/11 (64-бит), телефон на Android в том же Wi-Fi.
+NORYX — a stream deck on your phone for your PC
+You need: Windows 10/11 (64-bit), an Android phone on the same Wi-Fi.
 
-УСТАНОВКА
-1. Распакуй архив в обычную папку, лучше C:\Noryx
-   (ПКМ по архиву → «Извлечь все…» → впиши C:\Noryx). Прямо из архива не запускай.
-2. Запусти Start.bat.
-   • Первый запуск сам скачает Python и библиотеки (~40 МБ, 1–3 минуты, нужен интернет).
-     Всё ложится только в эту папку — в Windows ничего не устанавливается.
-   • В конце Windows спросит «Разрешить этому приложению вносить изменения?» (Обработчик команд
-     Windows) — жми «Да»: так открываются порты в брандмауэре, чтобы телефон достучался до ПК
-     (только для устройств из твоей домашней сети).
-   • Вылезло «Система Windows защитила ваш компьютер» — «Подробнее» → «Выполнить в любом случае».
-     Чтобы не вылезало: до распаковки ПКМ по архиву → Свойства → галочка «Разблокировать» → ОК.
-3. Готово: у часов появился значок дека. ПКМ по нему — открыть дек, «Запускать вместе с Windows»,
-   лог, выход. Дальше запускай так же, через Start.bat (или включи автозапуск в меню значка).
+INSTALLATION
+1. Unpack the archive into a regular folder, preferably C:\Noryx
+   (right-click the archive → «Extract All…» → type C:\Noryx). Don't run it straight from the archive.
+2. Run Start.bat.
+   • The first run downloads Python and the libraries itself (~40 MB, 1–3 minutes, internet needed).
+     Everything goes into this folder only — nothing is installed into Windows.
+   • At the end Windows asks «Do you want to allow this app to make changes?» (Windows Command
+     Processor) — press «Yes»: this opens the firewall ports so the phone can reach the PC
+     (only for devices on your home network).
+   • «Windows protected your PC» popped up — «More info» → «Run anyway».
+     To avoid it: before unpacking, right-click the archive → Properties → tick «Unblock» → OK.
+3. Done: the deck icon appeared by the clock. Right-click it — open the deck, «Start with Windows»,
+   log, exit. From now on start it the same way, with Start.bat (or turn on autostart in the icon menu).
 
-ТЕЛЕФОН
-1. Скинь на телефон Noryx.apk из этой папки (например, себе в Telegram «Избранное») и установи.
-   Телефон может попросить разрешить установку из этого источника, а Play Защита — предупредить
-   о неизвестном приложении: «Всё равно установить».
-2. Открой приложение — оно само найдёт ПК. Не нашло — «Ввести адрес»: адрес показан в окне
-   после первого запуска и в меню значка в трее («С телефона: http://…:8765»).
-   Можно и без приложения: открой этот адрес в браузере телефона (подойдёт и iPhone).
-3. Первый раз телефон попросит код из 6 цифр — ПК покажет его уведомлением у часов (и подсказкой на уже
-   подключённых телефонах). Дальше телефон помнит себя сам. Свои устройства и «Забыть» — в окне «Устройства».
+PHONE
+1. Send Noryx.apk from this folder to the phone (for example, to your Telegram «Saved Messages») and install it.
+   The phone may ask to allow installs from this source, and Play Protect may warn
+   about an unknown app: «Install anyway».
+2. Open the app — it finds the PC by itself. It didn't — «Enter the address»: the address is shown in the window
+   after the first run and in the tray icon menu («From a phone: http://…:8765»).
+   It also works without the app: open that address in the phone's browser (an iPhone works too).
+3. The first time the phone asks for a 6-digit code — the PC shows it as a notification by the clock (and as a hint on
+   phones already connected). After that the phone remembers itself. Own devices and «Forget» — the «Devices» window.
 
-ЕСЛИ ЧТО-ТО НЕ ТАК
-• Телефон не подключается — запусти Firewall.bat (сам попросит права администратора).
-  Если стоит антивирус со своим фаерволом (Kaspersky, ESET, Avast…) — разреши в нём Python из этой папки.
-  Телефон и ПК должны быть в одной сети (гостевой Wi-Fi роутера не подойдёт).
-• Установка не прошла — проверь интернет и запусти Start.bat ещё раз. Подробности: logs\install.log.
-  Совсем сломалось — удали папку python и запусти Start.bat заново.
-• Дек не запускается или глючит — смотри logs\server.log.
-• Остановить дек — значок в трее → «Выход» (или Stop.bat).
+IF SOMETHING'S WRONG
+• The phone doesn't connect — run Firewall.bat (it asks for administrator rights itself).
+  If you have an antivirus with its own firewall (Kaspersky, ESET, Avast…) — allow Python from this folder in it.
+  The phone and the PC must be on the same network (the router's guest Wi-Fi won't do).
+• The installation failed — check the internet and run Start.bat again. Details: logs\install.log.
+  Completely broken — delete the python folder and run Start.bat again.
+• The deck doesn't start or glitches — see logs\server.log.
+• Stop the deck — tray icon → «Exit» (or Stop.bat).
 
-ЧТО УМЕЕТ
-• Режимы с кнопками: программы, группы программ, макросы, хоткеи. Добавляются с телефона кнопкой «+».
-  При первом запуске из стандартного набора сами убираются программы, которых на этом ПК нет.
-  Режим может сам запускать свои основные программы и закрывать программы другого режима —
-  это включается в Настройках: «Автозапуск базы» и «Закрывать чужие программы».
-• Третий режим «Хоткеи» (включается в Настройках → Функции): мелкие плитки (8×4) с сочетаниями клавиш —
-  свои добавляются через «+», «Проверить» сразу жмёт сочетание на ПК; внизу можно переключиться
-  на экранную клавиатуру или цифровой блок. Хоткей можно поставить и в обычный режим: «+» → «Хоткей…».
-• Скрипты как в AutoHotkey: «+» → «Скрипт…» — одна кнопка жмёт сочетания по очереди с паузами, набирает
-  текст, зажимает клавиши. Строка — шаг: ctrl+c / пауза 500 / текст Привет! / держать w 1500.
-  Повторить N раз или «По кругу»; нажал кнопку ещё раз — стоп. «Проверить» — один прогон сразу на ПК.
-• Окно режима — удержи режим (¾ секунды): название, значок, цвет и размер плиток — по горизонтали 4–8,
-  по вертикали 2–4 (по умолчанию 4×2, у «Хоткеев» 8×4). Свайп вверх/вниз — соседний режим.
-• Язык — русский или украинский: Настройки → Язык.
-• Свои режимы: на главном экране «Правка» → «Новый режим» (название, значок, цвет). Там же порядок
-  (две плитки подряд — поменять местами), карандаш — переименовать, крестик — удалить свой режим.
-  Больше двух режимов — плитки становятся маленькими 2×2, листаются свайпом.
-  Цвет режима выбирается только в окне режима — любой: кружок с радугой открывает круг оттенков,
-  насыщенность и яркость; «Изменить цвета» — подправить цвет или убрать свой.
-• Часы с датой в доке — Настройки → «Часы».
-• «Правка»: плитки и режимы перетаскиваются пальцем; в правой панели — её ширина и порядок блоков (стрелки).
-• Плитка запущенной программы показывает её окно, ещё одно нажатие — сворачивает.
-• Режим часов: деком не пользуются 30 минут — часы на весь экран, приглушённо; играет музыка — управление
-  и визуализатор. Тап — обратно. Через час экран гаснет. Время и выключение — Настройки → Экран.
-• Плагины — Настройки → кнопка «Плагины» в шапке: включить / выключить каждый или все разом. Свой плагин — файл .py в папке
-  plugins (как писать — plugins\README.txt). Ставь только свои или проверенные: плагин — программа на ПК.
-• Визуализатор: цвет из обложки трека или свой — Настройки → Экран. В окне режима готовые цвета можно
-  заменить своими («Изменить цвета» → тап по готовому).
-• Док: громкость и микшер, плеер (Spotify / YouTube Music / «что играет» — Настройки → Музыка),
-  нагрузка ЦП и ОЗУ.
-• Загрузка видеокарты и температуры — если запущен LibreHardwareMonitor (от администратора)
-  с включённым Options → Remote Web Server (порт 8085).
-• Саундпад — кнопка с нотой в доке. Звуки (mp3, wav, ogg, flac) кидай в папку sounds\
-  или жми «Добавить звуки с ПК…».
-  Чтобы звуки слышали в Discord: поставь VB-Audio Virtual Cable (бесплатный, vb-audio.com/Cable),
-  в саундпаде «Звук» → «В эфир» — CABLE Input, «Голос с микрофона — туда же» — твой микрофон.
-  В Discord устройство ввода — CABLE Output.
-• Плагины (лампа на Arduino, монитор, Discord, игры…) и моды (свой вид, компоновка главного экрана из панелей) —
-  Настройки → «Плагины» / «Моды» → «Каталог»: установить, обновить, откатить. Инструкции — в README каждого плагина.
-• Телефон-киоск (отдельный телефон только под дек): телефон по USB с отладкой, без аккаунтов → Phone.bat.
-  Выключить — Настройки дека → «Киоск» или Phone.bat off; вернуть всё — Phone.bat release и restore.
+WHAT IT CAN DO
+• Modes with buttons: apps, app groups, macros, hotkeys. Added from the phone with the «+» button.
+  On the first run, apps from the default set that aren't on this PC are removed by themselves.
+  A mode can start its main apps by itself and close the apps of another mode —
+  turn this on in Settings: «Autostart the base» and «Close other apps».
+• The «Hotkeys» mode (turned on in Settings → Features): small tiles (8×4) with key combinations —
+  add your own with «+», «Check» presses the combination on the PC right away; at the bottom you can switch
+  to the on-screen keyboard or the numpad. A hotkey can also go into a regular mode: «+» → «Hotkey…».
+• Scripts like AutoHotkey: «+» → «Script…» — one button presses combinations in turn with pauses, types
+  text, holds keys. A line is a step: ctrl+c / wait 500 / text Hello! / hold w 1500.
+  Repeat N times or «Loop»; press the button again — stop. «Check» — one run on the PC right away.
+• Mode window — hold the mode (¾ second): name, icon, color and tile size — horizontally 4–8,
+  vertically 2–4 (4×2 by default, 8×4 for «Hotkeys»). Swipe up/down — the next mode.
+• Language — Settings → «Languages»: English and Ukrainian are built in, others download from the catalog with a tap.
+• Your own modes: on the home screen «Edit» → «New mode» (name, icon, color). There too — the order
+  (two tiles in a row — swap them), the pencil — rename, the cross — delete your mode.
+  More than two modes — the tiles become small 2×2 and scroll with a swipe.
+  The mode color is chosen only in the mode window — any color: the rainbow circle opens the hue wheel,
+  saturation and brightness; «Edit colors» — adjust a color or remove your own.
+• A clock with the date in the dock — Settings → «Clock».
+• «Edit»: tiles and modes are dragged with a finger; in the right panel — its width and the block order (arrows).
+• The tile of a running app shows its window, one more press — minimizes it.
+• Clock mode: the deck is unused for 30 minutes — a dimmed full-screen clock; music is playing — controls
+  and the visualizer. Tap — back. An hour later the screen turns off. Time and turning off — Settings → Screen.
+• Plugins — Settings → the «Plugins» button in the header: turn each on / off, or all at once. Your own plugin — a .py
+  file in the plugins folder (how to write one — plugins\README.txt). Install only your own or trusted ones: a plugin is
+  a program on the PC.
+• Visualizer: color from the track cover or your own — Settings → Screen. In the mode window the ready colors can be
+  replaced with your own («Edit colors» → tap a ready one).
+• Dock: volume and mixer, player (Spotify / YouTube Music / «what's playing» — Settings → Music),
+  CPU and RAM load.
+• GPU load and temperatures — if LibreHardwareMonitor is running (as administrator)
+  with Options → Remote Web Server turned on (port 8085).
+• Soundpad — the note button in the dock. Drop sounds (mp3, wav, ogg, flac) into the sounds\ folder
+  or press «Add sounds from the PC…».
+  To make Discord hear the sounds: install VB-Audio Virtual Cable (free, vb-audio.com/Cable),
+  in the soundpad «Sound» → «On air» — CABLE Input, «Voice from the microphone — there too» — your microphone.
+  In Discord the input device — CABLE Output.
+• Plugins (Arduino lamp, monitor, Discord, games…) and mods (your own look, a home screen layout of panels) —
+  Settings → «Plugins» / «Mods» → «Catalog»: install, update, roll back. Instructions — in each plugin's README.
+• Kiosk phone (a separate phone just for the deck): the phone over USB with debugging, without accounts → Phone.bat.
+  Turn it off — deck Settings → «Kiosk» or Phone.bat off; bring everything back — Phone.bat release and restore.
 
-Новый телефон подключается только кодом из 6 цифр, который показывает ПК. Роли устройств — окно «Устройства».
-Пользуйся дома, не в общественном Wi-Fi.
+A new phone connects only with the 6-digit code the PC shows. Device roles — the «Devices» window.
+Use it at home, not on public Wi-Fi.
 
-ОБНОВЛЕНИЯ
-Через 10 секунд после запуска дек проверяет GitHub. Есть новая версия — всплывёт «Доступно обновление»
-(на телефоне и у часов). Обновить — значок в трее → «Обновить дек» или Настройки → Обновления → «Обновить»:
-дек скачает новую версию, при необходимости поставит библиотеки и перезапустится.
-Настройки (data\) и звуки (sounds\) не трогает. «Вернуть прошлую версию» — откат.
-«Обновляться самому» (по умолчанию выключено) — ставить новые версии без кнопки.
-Без интернета — «Обновить из файла…» (в трее и в Настройках → Обновления): на ПК откроется окно
-выбора — укажи Noryx.zip или zip исходников с GitHub (Code → Download ZIP).
-Вручную: закрой дек (значок → «Выход»), распакуй новую версию поверх этой папки и запусти Start.bat.
-Удалить: выключи «Запускать вместе с Windows» в меню значка, нажми «Выход» и удали папку.
+UPDATES
+10 seconds after starting, the deck checks GitHub. A new version exists — «Update available» pops up
+(on the phone and by the clock). To update — tray icon → «Update the deck» or Settings → Updates → «Update»:
+the deck downloads the new version, installs libraries if needed and restarts.
+It doesn't touch settings (data\) and sounds (sounds\). «Restore the previous version» — rollback.
+«Update by itself» (off by default) — install new versions without the button.
+Without internet — «Update from file…» (in the tray and in Settings → Updates): a picker window
+opens on the PC — choose Noryx.zip or a source zip from GitHub (Code → Download ZIP).
+Manually: close the deck (icon → «Exit»), unpack the new version over this folder and run Start.bat.
+Uninstall: turn off «Start with Windows» in the icon menu, press «Exit» and delete the folder.

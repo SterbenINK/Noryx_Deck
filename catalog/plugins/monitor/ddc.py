@@ -26,10 +26,10 @@ def backend():
         try:
             return WinDDC()
         except (OSError, AttributeError) as e:          # нет dxva2 / нужных функций (Wine, урезанная Windows)
-            raise DDCError(f"dxva2.dll без DDC/CI: {e}") from e
+            raise DDCError(f"dxva2.dll without DDC/CI: {e}") from e
     if sys.platform.startswith("linux"):
         return LinuxDDC()
-    raise DDCError("DDC/CI: только Windows и Linux")
+    raise DDCError("DDC/CI: Windows and Linux only")
 
 
 # ---------------- Windows ----------------
@@ -102,7 +102,7 @@ class WinDDC:
         """(текущее, максимум) или None — монитор этот код не знает / не ответил."""
         ct, wt = self.ct, self.wt
         if key not in self.mons:                     # хендл 0 — настоящий (первый монитор), ctypes даёт его как None
-            raise DDCError(f"нет монитора {key}")
+            raise DDCError(f"no monitor {key}")
         h = self.mons[key] or 0
         cur, mx = wt.DWORD(), wt.DWORD()
         if not self.dxva2.GetVCPFeatureAndVCPFeatureReply(h, code, None, ct.byref(cur), ct.byref(mx)):
@@ -111,7 +111,7 @@ class WinDDC:
 
     def set(self, key, code, value):
         if key not in self.mons:                     # хендл 0 — настоящий (первый монитор), ctypes даёт его как None
-            raise DDCError(f"нет монитора {key}")
+            raise DDCError(f"no monitor {key}")
         h = self.mons[key] or 0
         return bool(self.dxva2.SetVCPFeature(h, code, int(value)))
 
@@ -130,7 +130,7 @@ class LinuxDDC:
         self.run = run or self._run
         self.mons = {}              # key → номер дисплея ddcutil
         if run is None and not shutil.which("ddcutil"):
-            raise DDCError("нет ddcutil: sudo dnf install ddcutil (или apt), доступ к /dev/i2c-* — группа i2c")
+            raise DDCError("no ddcutil: sudo dnf install ddcutil (or apt), access to /dev/i2c-* — the i2c group")
 
     @staticmethod
     def _run(args, timeout=10):
@@ -159,7 +159,7 @@ class LinuxDDC:
     def get(self, key, code):
         d = self.mons.get(key)
         if d is None:
-            raise DDCError(f"нет монитора {key}")
+            raise DDCError(f"no monitor {key}")
         rc, out = self.run(["-d", str(d), "getvcp", f"{code:02x}", "--brief"])
         m = re.search(r"VCP\s+[0-9A-Fa-f]+\s+C\s+(\d+)\s+(\d+)", out)
         if rc != 0 or not m:
@@ -169,7 +169,7 @@ class LinuxDDC:
     def set(self, key, code, value):
         d = self.mons.get(key)
         if d is None:
-            raise DDCError(f"нет монитора {key}")
+            raise DDCError(f"no monitor {key}")
         rc, _ = self.run(["-d", str(d), "setvcp", f"{code:02x}", str(int(value))])
         return rc == 0
 

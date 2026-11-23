@@ -761,8 +761,8 @@ def ask_files(title, filters, multi=False, start=None):
 
 def pick_exe():
     """Окно выбора программы на ПК (блокирует — вызывать в отдельном потоке)."""
-    files = ask_files(i18n.tr("Noryx — выбери программу", "Noryx — обери програму"),
-                      [(i18n.tr("Программы", "Програми"), EXEC_FILES), (i18n.tr("Все файлы", "Усі файли"), "*")])
+    files = ask_files(i18n.tr("Noryx — choose an app", "Noryx — обери програму"),
+                      [(i18n.tr("Programs", "Програми"), EXEC_FILES), (i18n.tr("All files", "Усі файли"), "*")])
     f = files[0] if files else ""
     if not f:
         return None

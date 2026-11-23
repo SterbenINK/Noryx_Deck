@@ -16,13 +16,17 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-NAME = {"ru": "Discord (микрофон и звук)", "uk": "Discord (мікрофон і звук)"}
-ABOUT = {"ru": "Выключить микрофон и звук Discord, не открывая его окно (через API Discord, как Stream Deck)",
+NAME = {"en": "Discord (mic and sound)", "uk": "Discord (мікрофон і звук)"}
+ABOUT = {"en": "Mute Discord's mic and sound without opening its window (through the Discord API, like "
+               "Stream Deck)",
          "uk": "Вимкнути мікрофон і звук Discord, не відкриваючи його вікно (через API Discord, як Stream Deck)"}
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = ["network", "native"]
-VERSION = "1.0.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
-CHANGES = [("1.0.0", "Первая версия в каталоге: микрофон и звук Discord через его локальный API",
+VERSION = "1.1.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
+CHANGES = [("1.1.0", "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+            "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"),
+           ("1.0.0", "First version in the catalog: Discord mic and sound through its local API",
             "Перша версія в каталозі: мікрофон і звук Discord через його локальний API")]
 
 SCOPES = ["rpc", "rpc.voice.read", "rpc.voice.write"]
@@ -167,7 +171,7 @@ class Plugin:
             c["token"] = tok
             self.api.call(self.api.save)
             return tok
-        raise last or RuntimeError("нет токена")
+        raise last or RuntimeError("no token")
 
     @staticmethod
     def _http(url, form):
@@ -225,53 +229,53 @@ class Plugin:
 
     def status(self):
         return {
-            "init": self.tr("Подключаюсь…", "Підключаюся…"),
-            "nocfg": self.tr("Нужны Client ID и Client Secret своего приложения Discord", "Потрібні Client ID і Client Secret свого застосунку Discord"),
-            "nodiscord": self.tr("Discord не запущен на ПК", "Discord не запущено на ПК"),
-            "needauth": self.tr("Нажми «Подключить» и разреши в Discord", "Натисни «Підключити» і дозволь у Discord"),
-            "auth": self.tr("Подтверди в окне Discord («Авторизовать»)", "Підтверди у вікні Discord («Авторизувати»)"),
-            "ok": self.tr("Подключено", "Підключено") + (f" — {self.user}" if self.user else ""),
-            "err": self.tr("Ошибка", "Помилка") + (f": {self.err}" if self.err else ""),
+            "init": self.tr("Connecting…", "Підключаюся…"),
+            "nocfg": self.tr("Needs the Client ID and Client Secret of your own Discord app", "Потрібні Client ID і Client Secret свого застосунку Discord"),
+            "nodiscord": self.tr("Discord isn't running on the PC", "Discord не запущено на ПК"),
+            "needauth": self.tr("Press «Connect» and allow it in Discord", "Натисни «Підключити» і дозволь у Discord"),
+            "auth": self.tr("Confirm in the Discord window («Authorize»)", "Підтверди у вікні Discord («Авторизувати»)"),
+            "ok": self.tr("Connected", "Підключено") + (f" — {self.user}" if self.user else ""),
+            "err": self.tr("Error", "Помилка") + (f": {self.err}" if self.err else ""),
         }.get(self.state, self.state)
 
     def ui(self):
         c = self.cfg()
         ok = self.state == "ok"
-        mic = {"label": self.tr("Микрофон", "Мікрофон") + (" — " + self.tr("выкл", "вимк") if self.mute else ""),
+        mic = {"label": self.tr("Microphone", "Мікрофон") + (" — " + self.tr("off", "вимк") if self.mute else ""),
                "on": bool(self.mute)}
-        snd = {"label": self.tr("Звук", "Звук") + (" — " + self.tr("выкл", "вимк") if self.deaf else ""),
+        snd = {"label": self.tr("Sound", "Звук") + (" — " + self.tr("off", "вимк") if self.deaf else ""),
                "on": bool(self.deaf)}
-        settings = [{"type": "text", "label": self.tr("Состояние", "Стан"), "value": self.status()}]
+        settings = [{"type": "text", "label": self.tr("Condition", "Стан"), "value": self.status()}]
         if not ok:
             settings.append({"type": "label", "label": self.tr(
                 "discord.com/developers/applications → New Application → OAuth2: Client ID, Client Secret, Redirects — http://localhost",
                 "discord.com/developers/applications → New Application → OAuth2: Client ID, Client Secret, Redirects — http://localhost")})
         settings += [
             {"type": "input", "id": "cid", "placeholder": "Client ID" + (f" ({c['clientId']})" if c.get("clientId") else ""),
-             "button": self.tr("Сохранить", "Зберегти")},
-            {"type": "input", "id": "secret", "placeholder": "Client Secret" + (" (" + self.tr("сохранён", "збережено") + ")" if c.get("secret") else ""),
-             "button": self.tr("Сохранить", "Зберегти")},
+             "button": self.tr("Save", "Зберегти")},
+            {"type": "input", "id": "secret", "placeholder": "Client Secret" + (" (" + self.tr("saved", "збережено") + ")" if c.get("secret") else ""),
+             "button": self.tr("Save", "Зберегти")},
         ]
         if c.get("token"):
-            settings.append({"type": "button", "id": "logout", "label": self.tr("Отключить (забыть токен)", "Відключити (забути токен)")})
+            settings.append({"type": "button", "id": "logout", "label": self.tr("Disconnect (forget the token)", "Відключити (забути токен)")})
         elif c.get("clientId") and c.get("secret"):
-            settings.append({"type": "button", "id": "auth", "label": self.tr("Подключить", "Підключити"), "style": "dashed", "wide": True})
+            settings.append({"type": "button", "id": "auth", "label": self.tr("Connect", "Підключити"), "style": "dashed", "wide": True})
         dock = [{"type": "row", "items": [
             {"type": "button", "id": "mute", "icon": "micOff" if self.mute else "mic", "disabled": not ok, **mic},
             {"type": "button", "id": "deaf", "icon": "spk", "disabled": not ok, **snd}]}]
         if not ok:
-            short = {"nocfg": self.tr("настрой в «Плагинах»", "налаштуй у «Плагінах»"), "nodiscord": self.tr("не запущен", "не запущено"),
-                     "needauth": self.tr("нажми «Подключить»", "натисни «Підключити»"), "auth": self.tr("подтверди в Discord", "підтверди в Discord"),
-                     "err": self.tr("ошибка — «Плагины»", "помилка — «Плагіни»")}.get(self.state, "…")
+            short = {"nocfg": self.tr("set it up in «Plugins»", "налаштуй у «Плагінах»"), "nodiscord": self.tr("not running", "не запущено"),
+                     "needauth": self.tr("press «Connect»", "натисни «Підключити»"), "auth": self.tr("confirm in Discord", "підтверди в Discord"),
+                     "err": self.tr("error — «Plugins»", "помилка — «Плагіни»")}.get(self.state, "…")
             dock.insert(0, {"type": "text", "label": "Discord", "value": short})
         return {
             "dock": dock,
             "settings": settings,
-            "tiles": [{"id": "mute", "icon": "micOff" if self.mute else "mic", "label": self.tr("Микрофон", "Мікрофон"),
-                       "sub": (self.tr("Выключен", "Вимкнено") if self.mute else self.tr("Включён", "Увімкнено")) if ok else "Discord",
+            "tiles": [{"id": "mute", "icon": "micOff" if self.mute else "mic", "label": self.tr("Microphone", "Мікрофон"),
+                       "sub": (self.tr("Off", "Вимкнено") if self.mute else self.tr("On", "Увімкнено")) if ok else "Discord",
                        "on": bool(self.mute)},
-                      {"id": "deaf", "icon": "spk", "label": self.tr("Звук", "Звук"),
-                       "sub": (self.tr("Выключен", "Вимкнено") if self.deaf else self.tr("Включён", "Увімкнено")) if ok else "Discord",
+                      {"id": "deaf", "icon": "spk", "label": self.tr("Sound", "Звук"),
+                       "sub": (self.tr("Off", "Вимкнено") if self.deaf else self.tr("On", "Увімкнено")) if ok else "Discord",
                        "on": bool(self.deaf)}],
             # подключён раньше (есть токен) — кнопки на плитке остаются и пока Discord перезапускается: иначе страница
             # вернула бы сочетания клавиш, а они вытаскивают окно Discord наверх

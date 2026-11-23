@@ -17,13 +17,16 @@ import threading
 import time
 import zlib
 
-NAME = {"ru": "Второй экран", "uk": "Другий екран"}
-ABOUT = {"ru": "Телефон — второй монитор ПК (нужен драйвер Virtual Display Driver). Только Windows",
+NAME = {"en": "Second screen", "uk": "Другий екран"}
+ABOUT = {"en": "The phone as a second PC monitor (needs the Virtual Display Driver). Windows only",
          "uk": "Телефон — другий монітор ПК (потрібен драйвер Virtual Display Driver). Тільки Windows"}
 API = 2                                  # версия API плагинов дека (perms.API_VERSION)
+LANGS = ["en", "uk"]                     # на каких языках свои тексты (первый — основной); другие — из языковых пакетов дека
 PERMS = ["screen", "input", "native"]
-VERSION = "1.0.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
-CHANGES = [("1.0.0", "Первая версия в каталоге: телефон — второй монитор",
+VERSION = "1.1.0"                        # версия плагина в каталоге (catalog/index.json): подними — деки предложат обновиться
+CHANGES = [("1.1.0", "English is now the main language: the plugin speaks English by default, Ukrainian is built in, other languages come from the deck's language packs",
+            "Основна мова тепер англійська: плагін англійською за замовчуванням, українська вбудована, інші мови — з мовних пакетів деку"),
+           ("1.0.0", "First version in the catalog: the phone as a second monitor",
             "Перша версія в каталозі: телефон — другий монітор")]
 OS = ["windows"]                         # только Windows: на Linux каталог не предложит
 DEFAULT_ON = False
@@ -226,59 +229,60 @@ class Plugin:
 
     def label(self, m):
         tr = self.api.tr
-        return f'{m["name"] or m["dev"]} — {m["w"]}×{m["h"]}' + (tr(" (основной)", " (основний)") if m["primary"] else "")
+        return f'{m["name"] or m["dev"]} — {m["w"]}×{m["h"]}' + (tr(" (main)", " (основний)") if m["primary"] else "")
 
     def help(self):
         tr = self.api.tr
         if self.cap is None:
-            return [tr("Пока только Windows.", "Поки що тільки Windows.")]
-        return [tr("Виртуальный монитор не найден. Поставь драйвер Virtual Display Driver (один раз, от администратора):",
+            return [tr("Windows only for now.", "Поки що тільки Windows.")]
+        return [tr("Virtual monitor not found. Install the Virtual Display Driver (once, as administrator):",
                    "Віртуальний монітор не знайдено. Постав драйвер Virtual Display Driver (один раз, від адміністратора):"),
                 WINGET,
-                tr("Потом в «Параметры → Дисплей» он появится вторым монитором. Своё разрешение телефона (2340×1080) — "
-                   "в C:\\VirtualDisplayDriver\\vdd_settings.xml, потом выключить и включить драйвер в диспетчере устройств.",
+                tr("Then it shows up in «Settings → Display» as a second monitor. Your phone's resolution "
+                   "(2340×1080) — in C:\\VirtualDisplayDriver\\vdd_settings.xml, then disable and enable the "
+                   "driver in Device Manager.",
                    "Потім у «Параметри → Дисплей» він з'явиться другим монітором. Свою роздільність телефона (2340×1080) — "
                    "у C:\\VirtualDisplayDriver\\vdd_settings.xml, потім вимкнути й увімкнути драйвер у диспетчері пристроїв."),
-                tr("Или выбери в настройках плагина любой монитор вручную.", "Або вибери в налаштуваннях плагіна будь-який монітор вручну.")]
+                tr("Or pick any monitor manually in the plugin settings.", "Або вибери в налаштуваннях плагіна будь-який монітор вручну.")]
 
     def ui(self):
         tr, mon = self.api.tr, self.mon
         watch = self.api.viewers()
-        sub = (f'{mon["w"]}×{mon["h"]}' if mon else tr("нет монитора", "немає монітора"))
+        sub = (f'{mon["w"]}×{mon["h"]}' if mon else tr("no monitor", "немає монітора"))
         if mon:
             screen = [{"type": "stream", "id": "scr", "full": True,
-                       "text": tr("Жду картинку с ПК…", "Чекаю картинку з ПК…") if not self.err else self.err}]
+                       "text": tr("Waiting for the picture from the PC…", "Чекаю картинку з ПК…") if not self.err else self.err}]
         else:
-            screen = [{"type": "card", "title": tr("Второй экран", "Другий екран"), "items":
+            screen = [{"type": "card", "title": tr("Second screen", "Другий екран"), "items":
                        [{"type": "label", "style": "line", "label": t} for t in self.help()]
                        + ([{"type": "label", "style": "line", "color": "#E5484D", "label": self.err}] if self.err else [])
-                       + [{"type": "button", "id": "rescan", "label": tr("Искать снова", "Шукати знову")}]}]
-        opts = [{"value": "", "label": tr("Сам (виртуальный)", "Сам (віртуальний)")}] + \
+                       + [{"type": "button", "id": "rescan", "label": tr("Search again", "Шукати знову")}]}]
+        opts = [{"value": "", "label": tr("Auto (virtual)", "Сам (віртуальний)")}] + \
                [{"value": m["dev"], "label": self.label(m)} for m in self.mons]
-        status = (f'{self.fps_real:.0f} {tr("кадр/с", "кадр/с")}, ~{self.kb} КБ' if watch else tr("никто не смотрит", "ніхто не дивиться"))
+        status = (f'{self.fps_real:.0f} {tr("fps", "кадр/с")}, ~{self.kb} {tr("KB", "КБ")}' if watch else tr("nobody is watching", "ніхто не дивиться"))
         return {
-            "mode": {"name": {"ru": "Второй экран", "uk": "Другий екран"}, "icon": "monitor", "color": "#4C8DFF",
+            "mode": {"name": {"en": "Second screen", "uk": "Другий екран"}, "icon": "monitor", "color": "#4C8DFF",
                      "sub": sub},
             "screen": screen,
-            "dock": [{"type": "card", "go": "mode", "title": tr("Второй экран", "Другий екран"), "icon": "🖥", "items": [
-                {"type": "text", "label": tr("Монитор", "Монітор"), "value": self.label(mon) if mon else "—"},
-                {"type": "text", "label": tr("Поток", "Потік"), "value": status}]}],
+            "dock": [{"type": "card", "go": "mode", "title": tr("Second screen", "Другий екран"), "icon": "🖥", "items": [
+                {"type": "text", "label": tr("Monitor", "Монітор"), "value": self.label(mon) if mon else "—"},
+                {"type": "text", "label": tr("Stream", "Потік"), "value": status}]}],
             "settings": [
                 *([{"type": "label", "style": "line", "color": "#E07A4F", "label": t} for t in self.help()] if not mon else []),
                 *([{"type": "label", "style": "line", "color": "#E5484D", "label": self.err}] if self.err else []),
-                {"type": "select", "id": "monitor", "label": tr("Монитор", "Монітор"), "value": self.api.cfg.get("monitor") or "",
+                {"type": "select", "id": "monitor", "label": tr("Monitor", "Монітор"), "value": self.api.cfg.get("monitor") or "",
                  "options": opts},
-                {"type": "select", "id": "fps", "label": tr("Кадров в секунду", "Кадрів за секунду"), "value": str(self.cfg("fps", "30")),
+                {"type": "select", "id": "fps", "label": tr("Frames per second", "Кадрів за секунду"), "value": str(self.cfg("fps", "30")),
                  "options": [{"value": k, "label": k} for k in FPS]},
-                {"type": "select", "id": "quality", "label": tr("Качество", "Якість"), "value": self.cfg("quality", "mid"),
-                 "options": [{"value": "low", "label": tr("Низкое (быстрее)", "Низька (швидше)")},
-                             {"value": "mid", "label": tr("Среднее", "Середня")},
-                             {"value": "high", "label": tr("Высокое", "Висока")}]},
-                {"type": "select", "id": "scale", "label": tr("Размер картинки", "Розмір картинки"), "value": str(self.cfg("scale", "100")),
+                {"type": "select", "id": "quality", "label": tr("Quality", "Якість"), "value": self.cfg("quality", "mid"),
+                 "options": [{"value": "low", "label": tr("Low (faster)", "Низька (швидше)")},
+                             {"value": "mid", "label": tr("Medium", "Середня")},
+                             {"value": "high", "label": tr("High", "Висока")}]},
+                {"type": "select", "id": "scale", "label": tr("Picture size", "Розмір картинки"), "value": str(self.cfg("scale", "100")),
                  "options": [{"value": k, "label": k + " %"} for k in SCALE]},
-                {"type": "toggle", "id": "mouse", "label": tr("Мышь вместо касаний", "Миша замість дотиків"),
+                {"type": "toggle", "id": "mouse", "label": tr("Mouse instead of touches", "Миша замість дотиків"),
                  "value": bool(self.api.cfg.get("mouse"))},
-                {"type": "text", "label": tr("Ввод", "Введення"),
-                 "value": {"touch": tr("касания Windows", "дотики Windows"), "mouse": tr("мышь", "миша")}.get(self.input_mode, "—")},
-                {"type": "text", "label": tr("Поток", "Потік"), "value": status}],
+                {"type": "text", "label": tr("Input", "Введення"),
+                 "value": {"touch": tr("Windows touches", "дотики Windows"), "mouse": tr("mouse", "миша")}.get(self.input_mode, "—")},
+                {"type": "text", "label": tr("Stream", "Потік"), "value": status}],
         }
